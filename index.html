@@ -8,11 +8,13 @@
     document.addEventListener("DOMContentLoaded", function () {
       const url = 'sample.pdf';
       const container = document.getElementById('pdf-container');
+      const printButton = document.getElementById('print-button');
 
       pdfjsLib.getDocument(url).promise.then(pdf => {
         const totalPages = pdf.numPages;
 
-        for (let pageNumber = 1; pageNumber <= totalPages; pageNumber++) {
+        // Sequential rendering
+        const renderPage = (pageNumber) => {
           pdf.getPage(pageNumber).then(page => {
             const viewport = page.getViewport({ scale: 1.5 });
             const canvas = document.createElement('canvas');
@@ -29,9 +31,21 @@
             page.render({
               canvasContext: ctx,
               viewport: viewport
+            }).promise.then(() => {
+              if (pageNumber < totalPages) {
+                renderPage(pageNumber + 1);
+              }
             });
           });
-        }
+        };
+
+        renderPage(1);
+      });
+
+      // Print once and hide button
+      printButton.addEventListener('click', () => {
+        window.print();
+        printButton.style.display = 'none';
       });
     });
   </script>
@@ -46,10 +60,25 @@
       margin: auto;
       padding: 20px;
     }
+    #print-button {
+      display: block;
+      margin: 20px auto;
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #print-button:hover {
+      background-color: #0056b3;
+    }
   </style>
 </head>
 <body oncontextmenu="return false;"> <!-- Right-click disabled -->
 
+<button id="print-button">Print</button>
 <div id="pdf-container"></div>
 
 </body>
