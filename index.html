@@ -7,20 +7,31 @@
   <script defer>
     document.addEventListener("DOMContentLoaded", function () {
       const url = 'sample.pdf';
-      const canvas = document.getElementById('pdf-canvas');
-      const ctx = canvas.getContext('2d');
+      const container = document.getElementById('pdf-container');
 
       pdfjsLib.getDocument(url).promise.then(pdf => {
-        pdf.getPage(1).then(page => {
-          const viewport = page.getViewport({ scale: 1.5 });
-          canvas.height = viewport.height;
-          canvas.width = viewport.width;
+        const totalPages = pdf.numPages;
 
-          page.render({
-            canvasContext: ctx,
-            viewport: viewport
+        for (let pageNumber = 1; pageNumber <= totalPages; pageNumber++) {
+          pdf.getPage(pageNumber).then(page => {
+            const viewport = page.getViewport({ scale: 1.5 });
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            canvas.style.margin = '20px auto';
+            canvas.style.display = 'block';
+            canvas.style.boxShadow = '0 0 10px rgba(0,0,0,0.2)';
+
+            container.appendChild(canvas);
+
+            page.render({
+              canvasContext: ctx,
+              viewport: viewport
+            });
           });
-        });
+        }
       });
     });
   </script>
@@ -30,16 +41,16 @@
       background: #f0f0f0;
       user-select: none;
     }
-    #pdf-canvas {
-      display: block;
-      margin: 20px auto;
-      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    #pdf-container {
+      max-width: 1000px;
+      margin: auto;
+      padding: 20px;
     }
   </style>
 </head>
 <body oncontextmenu="return false;"> <!-- Right-click disabled -->
 
-<canvas id="pdf-canvas"></canvas>
+<div id="pdf-container"></div>
 
 </body>
 </html>
