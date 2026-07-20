@@ -86,10 +86,19 @@ $ServerUrl = "http://192.168.0.10/erp"
 ---
 
 ## 📦 Winget অ্যাপ প্রসঙ্গে
-winget-ধরনের অ্যাপ silent ইনস্টল হতে ক্লায়েন্ট পিসিতে **App Installer / winget**
-থাকতে হবে (Windows 10/11-এ সাধারণত থাকে; না থাকলে Microsoft Store থেকে
-"App Installer" ইনস্টল করুন)। helper নিজেই `winget install` চালায় — বাড়তি কিছু লাগে না।
-winget অ্যাপে "Download" বাটন নেই, কারণ winget নিজেই অফিশিয়াল সোর্স থেকে নামায়।
+winget-ধরনের অ্যাপে ব্রাউজার থেকেই **৩টি কাজ** করা যায় — helper নিজেই
+সঠিক winget কমান্ড চালায়:
+
+| বাটন | winget কমান্ড |
+|------|----------------|
+| ⚡ **Install** | `winget install --id <ID> --silent` |
+| 🔄 **Update** | `winget upgrade --id <ID> --silent` |
+| 🗑️ **Uninstall** | `winget uninstall --id <ID> --silent` |
+
+শর্ত: ক্লায়েন্ট পিসিতে **App Installer / winget** থাকতে হবে (Windows 10/11-এ
+সাধারণত থাকে; না থাকলে Microsoft Store থেকে "App Installer")। winget অ্যাপে
+"Download" বাটন নেই, কারণ winget নিজেই অফিশিয়াল সোর্স থেকে নামায়।
+(নেটওয়ার্ক অ্যাপে শুধু Install/Download — update/uninstall winget-এর জন্য।)
 
 ## 📊 Install Log
 প্রতিটি silent install-এ helper পিসির নাম (`COMPUTERNAME`) সার্ভারে পাঠায়,

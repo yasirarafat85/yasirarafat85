@@ -45,6 +45,15 @@ function status_badge($s) {
         default   => '<span class="badge-c badge-gray"><i class="bi bi-hourglass-split"></i> শুরু</span>',
     };
 }
+function method_badge($m) {
+    return match ($m) {
+        'install'   => '<span class="badge-c badge-blue"><i class="bi bi-lightning-charge"></i> Install</span>',
+        'update'    => '<span class="badge-c" style="background:rgba(255,152,0,.15);color:#F57C00"><i class="bi bi-arrow-repeat"></i> Update</span>',
+        'uninstall' => '<span class="badge-c badge-red"><i class="bi bi-trash3"></i> Uninstall</span>',
+        'download'  => '<span class="badge-c badge-gray"><i class="bi bi-download"></i> Download</span>',
+        default     => '<span class="badge-c badge-gray"><i class="bi bi-lightning-charge"></i> ' . e(ucfirst($m)) . '</span>',
+    };
+}
 
 require __DIR__ . '/../../includes/header.php';
 ?>
@@ -79,8 +88,10 @@ require __DIR__ . '/../../includes/header.php';
   </div>
   <select class="form-control" name="method" style="width:auto">
     <option value="">সব পদ্ধতি</option>
-    <option value="silent" <?= $fMethod==='silent'?'selected':'' ?>>Silent Install</option>
-    <option value="download" <?= $fMethod==='download'?'selected':'' ?>>Download</option>
+    <option value="install"   <?= $fMethod==='install'?'selected':'' ?>>Install</option>
+    <option value="update"    <?= $fMethod==='update'?'selected':'' ?>>Update</option>
+    <option value="uninstall" <?= $fMethod==='uninstall'?'selected':'' ?>>Uninstall</option>
+    <option value="download"  <?= $fMethod==='download'?'selected':'' ?>>Download</option>
   </select>
   <select class="form-control" name="status" style="width:auto">
     <option value="">সব স্ট্যাটাস</option>
@@ -99,9 +110,7 @@ require __DIR__ . '/../../includes/header.php';
         <tr>
           <td style="color:var(--text-muted);white-space:nowrap"><?= e(date('d M, H:i', strtotime($l['created_at']))) ?></td>
           <td style="font-weight:600"><?= e($l['app_name'] ?: '—') ?></td>
-          <td><?= $l['method'] === 'silent'
-                ? '<span class="badge-c badge-blue"><i class="bi bi-lightning-charge"></i> Silent</span>'
-                : '<span class="badge-c badge-gray"><i class="bi bi-download"></i> Download</span>' ?></td>
+          <td><?= method_badge($l['method']) ?></td>
           <td><?= $l['pc_name'] ? '<span style="font-weight:600"><i class="bi bi-pc-display" style="color:var(--text-muted)"></i> '.e($l['pc_name']).'</span>' : '<span style="color:var(--text-muted)">—</span>' ?></td>
           <td style="color:var(--text-muted)">
             <?= $l['user_name'] ? e($l['user_name']) : '' ?>

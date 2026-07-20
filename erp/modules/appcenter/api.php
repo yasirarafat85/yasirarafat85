@@ -14,9 +14,13 @@ require_once __DIR__ . '/../../bootstrap.php';
 require_once __DIR__ . '/_schema.php';
 header('Content-Type: application/json; charset=utf-8');
 
-$id    = (int) input('id');
-$token = (string) input('t', '');
-$pc    = substr(trim((string) input('pc', '')), 0, 120) ?: null;
+$id     = (int) input('id');
+$token  = (string) input('t', '');
+$pc     = substr(trim((string) input('pc', '')), 0, 120) ?: null;
+$action = input('a', 'install');
+if (!in_array($action, ['install', 'update', 'uninstall'], true)) {
+    $action = 'install';
+}
 
 // টোকেন আগে যাচাই — বৈধ না হলে ডাটাবেসে হাত দেওয়ার আগেই থামাই
 if ($id <= 0 || !app_token_valid($id, $token)) {
@@ -40,7 +44,7 @@ if (input('action') === 'report') {
     exit;
 }
 
-// ---------- helper ইনস্টলের তথ্য চাইছে ----------
+// ---------- helper ইনস্টল/আপডেট/আনইনস্টলের তথ্য চাইছে ----------
 $app = $db->fetch("SELECT * FROM apps WHERE id = ? AND is_active = 1", [$id]);
 if (!$app) {
     http_response_code(404);
@@ -48,11 +52,18 @@ if (!$app) {
     exit;
 }
 
-// লগে "started" entry বানাই
+// update/uninstall শুধু winget অ্যাপে সম্ভব (network ইনস্টলারে standard uninstall নেই)
+if ($action !== 'install' && $app['install_type'] !== 'winget') {
+    http_response_code(400);
+    echo json_encode(['ok' => false, 'error' => 'এই অ্যাপে ' . $action . ' সম্ভব নয় (শুধু winget অ্যাপে)']);
+    exit;
+}
+
+// লগে "started" entry বানাই (method = কোন অ্যাকশন)
 $logId = $db->insert('install_logs', [
     'app_id'     => $app['id'],
     'app_name'   => $app['name'],
-    'method'     => 'silent',
+    'method'     => $action,          // install | update | uninstall
     'status'     => 'started',
     'pc_name'    => $pc,
     'ip_address' => client_ip(),
@@ -61,6 +72,7 @@ $logId = $db->insert('install_logs', [
 $resp = [
     'ok'      => true,
     'log_id'  => $logId,
+    'action'  => $action,
     'name'    => $app['name'],
     'type'    => $app['install_type'],       // network | winget
     'args'    => $app['silent_args'] ?? '',

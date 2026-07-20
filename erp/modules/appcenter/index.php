@@ -74,11 +74,21 @@ require __DIR__ . '/../../includes/header.php';
         <div class="app-desc"><?= e($app['description'] ?: 'কোনো বিবরণ নেই') ?></div>
         <div class="app-actions">
           <a class="btn btn-success btn-sm app-install"
-             href="appdeploy://<?= (int)$app['id'] ?>?t=<?= $token ?>"
-             data-name="<?= e($app['name']) ?>">
+             href="appdeploy://<?= (int)$app['id'] ?>?t=<?= $token ?>&a=install"
+             data-name="<?= e($app['name']) ?>" data-action="Install">
             <i class="bi bi-lightning-charge"></i> Install
           </a>
           <?php if ($isWinget): ?>
+            <a class="btn btn-warning btn-sm app-install"
+               href="appdeploy://<?= (int)$app['id'] ?>?t=<?= $token ?>&a=update"
+               data-name="<?= e($app['name']) ?>" data-action="Update">
+              <i class="bi bi-arrow-repeat"></i> Update
+            </a>
+            <a class="btn btn-danger btn-sm app-install"
+               href="appdeploy://<?= (int)$app['id'] ?>?t=<?= $token ?>&a=uninstall"
+               data-name="<?= e($app['name']) ?>" data-action="Uninstall">
+              <i class="bi bi-trash3"></i> Uninstall
+            </a>
             <button type="button" class="btn btn-ghost btn-sm" title="winget ID কপি"
                     onclick="copyPath(this, '<?= e($app['winget_id']) ?>')">
               <i class="bi bi-clipboard"></i> ID
@@ -125,9 +135,9 @@ require __DIR__ . '/../../includes/header.php';
 .app-cat{font-size:12px;color:var(--text-muted);margin:3px 0 10px}
 .app-desc{font-size:13px;color:var(--text-muted);line-height:1.5;flex:1;margin-bottom:16px;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.app-actions{display:flex;gap:6px}
-.app-actions .btn{flex:1;padding:8px 10px}
-.app-actions .btn-ghost{flex:0 0 auto;width:auto;padding:8px 11px}
+.app-actions{display:flex;gap:6px;flex-wrap:wrap}
+.app-actions .btn{flex:1 1 auto;min-width:86px;padding:8px 10px}
+.app-actions .btn-ghost{flex:0 0 auto;min-width:0;width:auto;padding:8px 11px}
 .install-toast{position:fixed;bottom:24px;right:24px;max-width:360px;background:var(--surface);
   border:1px solid var(--border);border-left:4px solid var(--info);border-radius:12px;padding:14px 16px;
   box-shadow:var(--shadow);display:none;align-items:flex-start;gap:12px;z-index:70}
@@ -143,11 +153,18 @@ function copyPath(btn, path){
     setTimeout(()=>btn.innerHTML = old, 1200);
   });
 }
-// Install বাটনে ক্লিক করলে protocol চালু হয় + সাহায্য টোস্ট দেখায়
+// Install/Update/Uninstall বাটনে ক্লিক করলে protocol চালু হয় + সাহায্য টোস্ট
+const actionBn = {Install:'ইনস্টল', Update:'আপডেট', Uninstall:'আনইনস্টল'};
 document.querySelectorAll('.app-install').forEach(a=>{
-  a.addEventListener('click', ()=>{
+  a.addEventListener('click', (e)=>{
+    // আনইনস্টলে আগে নিশ্চিত করি
+    if (a.dataset.action === 'Uninstall' && !confirm(a.dataset.name + ' আনইনস্টল করবেন?')) {
+      e.preventDefault();
+      return;
+    }
     const t = document.getElementById('installToast');
-    t.querySelector('b').textContent = a.dataset.name + ' — silent install শুরু হচ্ছে…';
+    const act = actionBn[a.dataset.action] || 'ইনস্টল';
+    t.querySelector('b').textContent = a.dataset.name + ' — ' + act + ' শুরু হচ্ছে…';
     t.classList.add('show');
     setTimeout(()=>t.classList.remove('show'), 7000);
   });

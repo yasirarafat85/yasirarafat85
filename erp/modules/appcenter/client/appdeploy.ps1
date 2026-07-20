@@ -26,29 +26,36 @@ $api   = "$ServerUrl/modules/appcenter/api.php"
 try {
     Log "Called with URI: $Uri"
 
-    # appdeploy://<id>?t=<token>  থেকে id ও token
-    $match = [regex]::Match($Uri, 'appdeploy://(?<id>\d+)\?t=(?<t>[a-fA-F0-9]+)')
+    # appdeploy://<id>?t=<token>&a=<action>  থেকে id, token, action
+    $match = [regex]::Match($Uri, 'appdeploy://(?<id>\d+)\?t=(?<t>[a-fA-F0-9]+)(&a=(?<a>\w+))?')
     if (-not $match.Success) { throw "URI ফরম্যাট ঠিক নয়।" }
-    $id    = $match.Groups['id'].Value
-    $token = $match.Groups['t'].Value
-    $pc    = $env:COMPUTERNAME
+    $id     = $match.Groups['id'].Value
+    $token  = $match.Groups['t'].Value
+    $action = if ($match.Groups['a'].Success) { $match.Groups['a'].Value } else { 'install' }
+    $pc     = $env:COMPUTERNAME
 
-    # সার্ভার থেকে ইনস্টল-তথ্য (পিসির নামসহ, যা লগ হবে)
-    $info = Invoke-RestMethod -Uri "$api?id=$id&t=$token&pc=$pc" -TimeoutSec 20
+    # সার্ভার থেকে তথ্য (পিসির নাম ও অ্যাকশনসহ, যা লগ হবে)
+    $info = Invoke-RestMethod -Uri "$api?id=$id&t=$token&a=$action&pc=$pc" -TimeoutSec 20
     if (-not $info.ok) { throw "সার্ভার বলছে: $($info.error)" }
     $logId = $info.log_id
-    Log "App: $($info.name) | Type: $($info.type) | PC: $pc | log_id: $logId"
+    Log "App: $($info.name) | Type: $($info.type) | Action: $action | PC: $pc | log_id: $logId"
 
-    # -------- ইনস্টল চালানো --------
+    # -------- অ্যাকশন চালানো --------
     if ($info.type -eq 'winget') {
-        # Windows Package Manager দিয়ে ইনস্টল
-        $wingetArgs = "install --id `"$($info.winget_id)`" --silent --accept-package-agreements --accept-source-agreements"
+        # Windows Package Manager: install / upgrade / uninstall
+        $common = "--silent --accept-package-agreements --accept-source-agreements"
+        switch ($action) {
+            'update'    { $wingetArgs = "upgrade   --id `"$($info.winget_id)`" $common" }
+            'uninstall' { $wingetArgs = "uninstall --id `"$($info.winget_id)`" --silent" }
+            default     { $wingetArgs = "install   --id `"$($info.winget_id)`" $common" }
+        }
         Log "Running: winget $wingetArgs"
         $p = Start-Process -FilePath "winget" -ArgumentList $wingetArgs -Wait -PassThru -WindowStyle Hidden
         if ($p.ExitCode -ne 0) { throw "winget exit code: $($p.ExitCode)" }
     }
     else {
-        # নেটওয়ার্ক শেয়ারের ইনস্টলার
+        # নেটওয়ার্ক শেয়ারের ইনস্টলার (শুধু install)
+        if ($action -ne 'install') { throw "network অ্যাপে $action সম্ভব নয়।" }
         $path = $info.path
         if (-not (Test-Path $path)) { throw "ইনস্টলার ফাইল পাওয়া যায়নি: $path" }
         if ([string]::IsNullOrWhiteSpace($info.args)) {
