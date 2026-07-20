@@ -37,7 +37,16 @@
 ব্যস! এটি নিজে থেকেই ফোল্ডার বানায়, স্ক্রিপ্ট কপি করে, URL বসায় ও
 protocol রেজিস্টার করে। **admin দরকার নেই।** ✅
 
-> 💡 `.bat` আর `.ps1` — দুটো ফাইল একসাথে একই ফোল্ডারে থাকতে হবে।
+**কোথায় বসে (হিডেন):** helper স্বয়ংক্রিয়ভাবে এখানে বসে —
+`%LOCALAPPDATA%\AppDeploy` (অর্থাৎ `C:\Users\<নাম>\AppData\Local\AppDeploy`)।
+`AppData` ফোল্ডার এমনিতেই লুকানো, তার উপর ফোল্ডারটাকে **hidden**-ও করা হয় —
+তাই ইউজারের চোখে পড়ে না। 🙈
+
+> 💡 `.bat` আর `.ps1` — দুটো ফাইল একসাথে একই ফোল্ডারে রেখে bat চালাতে হবে।
+
+**Program Files-এ রাখতে চাইলে:** `install-helper.bat` খুলে ভেতরের
+`HELPERDIR` লাইনটা `%ProgramFiles%\AppDeploy` করে দিন, আর bat-টা
+**Run as administrator** দিয়ে চালান (Program Files-এ লিখতে admin লাগে)।
 
 ---
 
