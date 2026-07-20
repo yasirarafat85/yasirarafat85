@@ -12,21 +12,9 @@ Auth::requirePermission('appcenter.view');
 $pageTitle = 'App Center';
 $db = Database::getInstance();
 
-// module নিজের টেবিল তৈরি করে নেয় (প্রথমবার)
-$db->query("CREATE TABLE IF NOT EXISTS apps (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(120) NOT NULL,
-    description VARCHAR(255) DEFAULT NULL,
-    category VARCHAR(60) DEFAULT 'General',
-    icon VARCHAR(60) NOT NULL DEFAULT 'bi-app',
-    color VARCHAR(20) NOT NULL DEFAULT 'blue',
-    network_path VARCHAR(500) NOT NULL,
-    silent_args VARCHAR(255) DEFAULT NULL,
-    version VARCHAR(40) DEFAULT NULL,
-    is_active TINYINT(1) NOT NULL DEFAULT 1,
-    sort_order INT NOT NULL DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+// টেবিল/কলাম নিশ্চিত করা (winget ও install_logs সহ)
+require_once __DIR__ . '/_schema.php';
+appcenter_ensure_schema($db);
 
 // সার্চ ও ক্যাটাগরি ফিল্টার
 $q   = trim(input('q', ''));
@@ -72,11 +60,14 @@ require __DIR__ . '/../../includes/header.php';
   </div>
 <?php else: ?>
   <div class="app-grid">
-    <?php foreach ($apps as $app): $token = app_token((int)$app['id']); ?>
+    <?php foreach ($apps as $app): $token = app_token((int)$app['id']); $isWinget = ($app['install_type'] === 'winget'); ?>
       <div class="app-card">
         <div class="app-top">
           <div class="app-icon <?= e($app['color']) ?>"><i class="bi <?= e($app['icon']) ?>"></i></div>
-          <?php if ($app['version']): ?><span class="badge-c badge-gray">v<?= e($app['version']) ?></span><?php endif; ?>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end">
+            <?php if ($isWinget): ?><span class="badge-c badge-blue" title="Windows Package Manager"><i class="bi bi-box"></i> winget</span><?php endif; ?>
+            <?php if ($app['version']): ?><span class="badge-c badge-gray">v<?= e($app['version']) ?></span><?php endif; ?>
+          </div>
         </div>
         <div class="app-name"><?= e($app['name']) ?></div>
         <div class="app-cat"><i class="bi bi-tag"></i> <?= e($app['category']) ?></div>
@@ -87,13 +78,20 @@ require __DIR__ . '/../../includes/header.php';
              data-name="<?= e($app['name']) ?>">
             <i class="bi bi-lightning-charge"></i> Install
           </a>
-          <a class="btn btn-primary btn-sm" href="<?= url('modules/appcenter/download.php?id=' . (int)$app['id']) ?>">
-            <i class="bi bi-download"></i> Download
-          </a>
-          <button type="button" class="btn btn-ghost btn-sm" title="নেটওয়ার্ক পাথ কপি"
-                  onclick="copyPath(this, '<?= e(str_replace('\\', '\\\\', resolve_app_path($app['network_path']))) ?>')">
-            <i class="bi bi-clipboard"></i>
-          </button>
+          <?php if ($isWinget): ?>
+            <button type="button" class="btn btn-ghost btn-sm" title="winget ID কপি"
+                    onclick="copyPath(this, '<?= e($app['winget_id']) ?>')">
+              <i class="bi bi-clipboard"></i> ID
+            </button>
+          <?php else: ?>
+            <a class="btn btn-primary btn-sm" href="<?= url('modules/appcenter/download.php?id=' . (int)$app['id']) ?>">
+              <i class="bi bi-download"></i> Download
+            </a>
+            <button type="button" class="btn btn-ghost btn-sm" title="নেটওয়ার্ক পাথ কপি"
+                    onclick="copyPath(this, '<?= e(str_replace('\\', '\\\\', resolve_app_path($app['network_path'] ?? ''))) ?>')">
+              <i class="bi bi-clipboard"></i>
+            </button>
+          <?php endif; ?>
         </div>
       </div>
     <?php endforeach; ?>

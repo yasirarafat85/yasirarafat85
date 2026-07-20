@@ -24,7 +24,9 @@ try {
 $schema = file_get_contents(__DIR__ . '/database/schema.sql');
 $pdo->exec($schema);
 
+require_once __DIR__ . '/core/helpers.php';   // e(), ensure_column() ইত্যাদি
 require_once __DIR__ . '/core/Database.php';
+require_once __DIR__ . '/modules/appcenter/_schema.php';
 $db = Database::getInstance();
 
 $messages = [];
@@ -90,44 +92,42 @@ if (!$db->fetch("SELECT id FROM menus LIMIT 1")) {
     $db->insert('menus', ['parent_id' => $settingsId, 'title' => 'Users',       'url' => 'users.php', 'icon' => 'bi-people',       'permission' => 'users.view',   'sort_order' => 1]);
     $db->insert('menus', ['parent_id' => $settingsId, 'title' => 'Roles',       'url' => 'roles.php', 'icon' => 'bi-shield-lock',  'permission' => 'roles.manage', 'sort_order' => 2]);
     $db->insert('menus', ['parent_id' => $settingsId, 'title' => 'App Manager', 'url' => 'modules/appcenter/admin.php', 'icon' => 'bi-hdd-stack', 'permission' => 'appcenter.manage', 'sort_order' => 3]);
-    $db->insert('menus', ['parent_id' => $settingsId, 'title' => 'Menu Manager','url' => 'menus.php', 'icon' => 'bi-list-nested',  'permission' => 'menus.manage', 'sort_order' => 4]);
+    $db->insert('menus', ['parent_id' => $settingsId, 'title' => 'Install Logs','url' => 'modules/appcenter/logs.php',  'icon' => 'bi-clock-history', 'permission' => 'appcenter.manage', 'sort_order' => 4]);
+    $db->insert('menus', ['parent_id' => $settingsId, 'title' => 'Menu Manager','url' => 'menus.php', 'icon' => 'bi-list-nested',  'permission' => 'menus.manage', 'sort_order' => 5]);
     $messages[] = 'Menus তৈরি হয়েছে';
 }
 
-// ---------- App Center: টেবিল + কিছু উদাহরণ অ্যাপ ----------
-$db->query("CREATE TABLE IF NOT EXISTS apps (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(120) NOT NULL,
-    description VARCHAR(255) DEFAULT NULL,
-    category VARCHAR(60) DEFAULT 'General',
-    icon VARCHAR(60) NOT NULL DEFAULT 'bi-app',
-    color VARCHAR(20) NOT NULL DEFAULT 'blue',
-    network_path VARCHAR(500) NOT NULL,
-    silent_args VARCHAR(255) DEFAULT NULL,
-    version VARCHAR(40) DEFAULT NULL,
-    is_active TINYINT(1) NOT NULL DEFAULT 1,
-    sort_order INT NOT NULL DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+// ---------- App Center: টেবিল (apps + install_logs) + কিছু উদাহরণ অ্যাপ ----------
+appcenter_ensure_schema($db);
 
 if (!$db->fetch("SELECT id FROM apps LIMIT 1")) {
-    // এগুলো নমুনা — অ্যাডমিন প্যানেল থেকে নিজের নেটওয়ার্ক পাথ দিয়ে বদলে নিন
-    $sampleApps = [
-        ['Google Chrome', 'দ্রুত ও নিরাপদ ওয়েব ব্রাউজার', 'Browser',     'bi-google',        'red',    'Chrome\\ChromeSetup.exe',      '/silent /install', '120.0'],
-        ['Mozilla Firefox','ওপেন-সোর্স ব্রাউজার',           'Browser',     'bi-browser-firefox','orange', 'Firefox\\FirefoxSetup.exe',    '-ms',              '121.0'],
-        ['7-Zip',          'ফাইল compress/extract টুল',     'Utility',     'bi-file-zip',      'gray',   '7zip\\7z-setup.exe',           '/S',               '23.01'],
-        ['VLC Player',     'যেকোনো ভিডিও/অডিও প্লেয়ার',      'Media',       'bi-play-circle',   'orange', 'VLC\\vlc-setup.exe',           '/L=1033 /S',       '3.0'],
-        ['Adobe Reader',   'PDF পড়ার সফটওয়্যার',            'Document',    'bi-filetype-pdf',  'red',    'AdobeReader\\AcroRdrDC.exe',   '/sAll /rs',        'DC'],
-        ['AnyDesk',        'রিমোট ডেস্কটপ সাপোর্ট',          'Remote',      'bi-display',       'red',    'AnyDesk\\AnyDesk.exe',         '--install',        '8.0'],
+    // network নমুনা — নিজের নেটওয়ার্ক পাথ দিয়ে বদলে নিন
+    $networkApps = [
+        ['Google Chrome', 'দ্রুত ও নিরাপদ ওয়েব ব্রাউজার', 'Browser',  'bi-google',         'red',    'Chrome\\ChromeSetup.exe',    '/silent /install', '120.0'],
+        ['Mozilla Firefox','ওপেন-সোর্স ব্রাউজার',           'Browser',  'bi-browser-firefox','orange', 'Firefox\\FirefoxSetup.exe',  '-ms',              '121.0'],
+        ['Adobe Reader',   'PDF পড়ার সফটওয়্যার',            'Document', 'bi-filetype-pdf',   'red',    'AdobeReader\\AcroRdrDC.exe', '/sAll /rs',        'DC'],
     ];
-    foreach ($sampleApps as $i => $a) {
+    $i = 1;
+    foreach ($networkApps as $a) {
         $db->insert('apps', [
-            'name' => $a[0], 'description' => $a[1], 'category' => $a[2],
-            'icon' => $a[3], 'color' => $a[4], 'network_path' => $a[5],
-            'silent_args' => $a[6], 'version' => $a[7], 'sort_order' => $i + 1,
+            'name' => $a[0], 'description' => $a[1], 'category' => $a[2], 'icon' => $a[3],
+            'color' => $a[4], 'install_type' => 'network', 'network_path' => $a[5],
+            'silent_args' => $a[6], 'version' => $a[7], 'sort_order' => $i++,
         ]);
     }
-    $messages[] = 'App Center-এ ৬টি নমুনা অ্যাপ যোগ হয়েছে';
+    // winget নমুনা — শুধু ID দিলেই winget নিজে নামিয়ে ইনস্টল করে
+    $wingetApps = [
+        ['7-Zip',      'ফাইল compress/extract টুল', 'Utility', 'bi-file-zip',    'gray',   '7zip.7zip'],
+        ['VLC Player', 'যেকোনো ভিডিও/অডিও প্লেয়ার',  'Media',   'bi-play-circle', 'orange', 'VideoLAN.VLC'],
+        ['AnyDesk',    'রিমোট ডেস্কটপ সাপোর্ট',      'Remote',  'bi-display',     'red',    'AnyDeskSoftwareGmbH.AnyDesk'],
+    ];
+    foreach ($wingetApps as $a) {
+        $db->insert('apps', [
+            'name' => $a[0], 'description' => $a[1], 'category' => $a[2], 'icon' => $a[3],
+            'color' => $a[4], 'install_type' => 'winget', 'winget_id' => $a[5], 'sort_order' => $i++,
+        ]);
+    }
+    $messages[] = 'App Center-এ ৬টি নমুনা অ্যাপ যোগ হয়েছে (৩টি network + ৩টি winget)';
 }
 
 // ---------- Default Super Admin User ----------

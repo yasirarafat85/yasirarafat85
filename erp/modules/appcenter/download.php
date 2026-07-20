@@ -4,9 +4,11 @@
  * (ব্রাউজার সরাসরি exe চালাতে পারে না, তাই ডাউনলোড করে ইউজার রান করবে।)
  */
 require_once __DIR__ . '/../../bootstrap.php';
+require_once __DIR__ . '/_schema.php';
 Auth::requirePermission('appcenter.view');
 
 $db  = Database::getInstance();
+appcenter_ensure_schema($db);
 $id  = (int) input('id');
 $app = $db->fetch("SELECT * FROM apps WHERE id = ? AND is_active = 1", [$id]);
 
@@ -15,12 +17,32 @@ if (!$app) {
     exit('অ্যাপ পাওয়া যায়নি।');
 }
 
-$path = resolve_app_path($app['network_path']);
+// winget অ্যাপ ডাউনলোড হয় না (কোনো ফাইল নেই — winget নিজে নামায়)
+if ($app['install_type'] === 'winget') {
+    http_response_code(400);
+    exit('এই অ্যাপটি winget দিয়ে ইনস্টল হয় — ডাউনলোডের ফাইল নেই। "Install" বাটন ব্যবহার করুন।');
+}
+
+$path = resolve_app_path($app['network_path'] ?? '');
+$u    = Auth::user();
 
 if (!is_file($path)) {
+    // ব্যর্থ ডাউনলোড লগ করি
+    $db->insert('install_logs', [
+        'app_id' => $app['id'], 'app_name' => $app['name'], 'method' => 'download',
+        'status' => 'failed', 'user_id' => $u['id'] ?? null, 'user_name' => $u['name'] ?? null,
+        'ip_address' => client_ip(), 'note' => 'file not found',
+    ]);
     http_response_code(404);
     exit('ফাইল খুঁজে পাওয়া যায়নি: ' . e($path) . "\n\nনেটওয়ার্ক পাথ ঠিক আছে কিনা এবং সার্ভার শেয়ারে অ্যাক্সেস আছে কিনা দেখুন।");
 }
+
+// সফল ডাউনলোড লগ করি (ব্রাউজার হোস্টনেম দেয় না, তাই IP + ইউজার রাখি)
+$db->insert('install_logs', [
+    'app_id' => $app['id'], 'app_name' => $app['name'], 'method' => 'download',
+    'status' => 'success', 'user_id' => $u['id'] ?? null, 'user_name' => $u['name'] ?? null,
+    'ip_address' => client_ip(), 'pc_name' => null,
+]);
 
 $filename = basename(str_replace('\\', '/', $path));
 

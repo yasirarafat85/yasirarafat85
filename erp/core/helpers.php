@@ -113,3 +113,30 @@ function app_token_valid(int $appId, string $token): bool
     }
     return false;
 }
+
+/**
+ * কলাম না থাকলে যোগ করে (পুরনো ডাটাবেসে নতুন ফিচার আনার জন্য নিরাপদ মাইগ্রেশন)।
+ * MySQL/MariaDB দুটোতেই কাজ করে।
+ */
+function ensure_column(Database $db, string $table, string $column, string $definition): void
+{
+    $exists = $db->scalar(
+        "SELECT COUNT(*) FROM information_schema.columns
+         WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?",
+        [$table, $column]
+    );
+    if (!$exists) {
+        $db->query("ALTER TABLE `$table` ADD COLUMN `$column` $definition");
+    }
+}
+
+/** ক্লায়েন্টের IP নিরাপদে বের করা (প্রক্সি থাকলেও) */
+function client_ip(): string
+{
+    foreach (['HTTP_X_FORWARDED_FOR', 'HTTP_CLIENT_IP', 'REMOTE_ADDR'] as $k) {
+        if (!empty($_SERVER[$k])) {
+            return trim(explode(',', $_SERVER[$k])[0]);
+        }
+    }
+    return 'unknown';
+}

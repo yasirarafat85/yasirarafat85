@@ -8,40 +8,32 @@ Auth::requirePermission('appcenter.manage');
 $pageTitle = 'App ম্যানেজ';
 $db = Database::getInstance();
 
-// টেবিল নিশ্চিত করা (frontend প্রথমে না খুললেও যেন কাজ করে)
-$db->query("CREATE TABLE IF NOT EXISTS apps (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(120) NOT NULL,
-    description VARCHAR(255) DEFAULT NULL,
-    category VARCHAR(60) DEFAULT 'General',
-    icon VARCHAR(60) NOT NULL DEFAULT 'bi-app',
-    color VARCHAR(20) NOT NULL DEFAULT 'blue',
-    network_path VARCHAR(500) NOT NULL,
-    silent_args VARCHAR(255) DEFAULT NULL,
-    version VARCHAR(40) DEFAULT NULL,
-    is_active TINYINT(1) NOT NULL DEFAULT 1,
-    sort_order INT NOT NULL DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+require_once __DIR__ . '/_schema.php';
+appcenter_ensure_schema($db);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
     $action = input('action');
     if ($action === 'save') {
+        $type = input('install_type') === 'winget' ? 'winget' : 'network';
         $data = [
             'name'         => trim(input('name')),
             'description'  => trim(input('description')),
             'category'     => trim(input('category')) ?: 'General',
             'icon'         => trim(input('icon')) ?: 'bi-app',
             'color'        => trim(input('color')) ?: 'blue',
+            'install_type' => $type,
             'network_path' => trim(input('network_path')),
+            'winget_id'    => trim(input('winget_id')),
             'silent_args'  => trim(input('silent_args')),
             'version'      => trim(input('version')),
             'is_active'    => (int) input('is_active', 1),
             'sort_order'   => (int) input('sort_order', 0),
         ];
-        if ($data['name'] === '' || $data['network_path'] === '') {
-            flash('error', 'নাম ও নেটওয়ার্ক পাথ দুটোই দরকার।');
+        // winget হলে winget_id লাগবে, নইলে network_path
+        $missing = $type === 'winget' ? $data['winget_id'] === '' : $data['network_path'] === '';
+        if ($data['name'] === '' || $missing) {
+            flash('error', $type === 'winget' ? 'নাম ও winget ID দুটোই দরকার।' : 'নাম ও নেটওয়ার্ক পাথ দুটোই দরকার।');
         } else {
             $id = (int) input('id');
             if ($id) { $db->update('apps', $data, 'id = ?', [$id]); flash('success', 'অ্যাপ আপডেট হয়েছে।'); }
@@ -61,9 +53,10 @@ $colors = ['blue','green','orange','purple','red','gray'];
 require __DIR__ . '/../../includes/header.php';
 ?>
 <div class="page-head">
-  <div><h1>App ম্যানেজ</h1><div class="sub">নেটওয়ার্ক শেয়ারের সফটওয়্যার এখানে যোগ করুন — মোট <?= count($apps) ?>টি</div></div>
+  <div><h1>App ম্যানেজ</h1><div class="sub">নেটওয়ার্ক শেয়ার বা winget দিয়ে সফটওয়্যার যোগ করুন — মোট <?= count($apps) ?>টি</div></div>
   <div style="display:flex;gap:10px">
-    <a class="btn btn-ghost" href="<?= url('modules/appcenter/index.php') ?>"><i class="bi bi-grid"></i> ফ্রন্টএন্ড দেখুন</a>
+    <a class="btn btn-ghost" href="<?= url('modules/appcenter/logs.php') ?>"><i class="bi bi-clock-history"></i> Install Logs</a>
+    <a class="btn btn-ghost" href="<?= url('modules/appcenter/index.php') ?>"><i class="bi bi-grid"></i> ফ্রন্টএন্ড</a>
     <button class="btn btn-primary" onclick="openAppModal()"><i class="bi bi-plus-lg"></i> নতুন অ্যাপ</button>
   </div>
 </div>
@@ -76,19 +69,19 @@ require __DIR__ . '/../../includes/header.php';
 
 <div class="card-c tight">
   <table class="table-c">
-    <thead><tr><th>অ্যাপ</th><th>ক্যাটাগরি</th><th>নেটওয়ার্ক পাথ</th><th>Silent Args</th><th>স্ট্যাটাস</th><th style="text-align:right">অ্যাকশন</th></tr></thead>
+    <thead><tr><th>অ্যাপ</th><th>ধরন</th><th>উৎস (পাথ / winget ID)</th><th>Silent Args</th><th>স্ট্যাটাস</th><th style="text-align:right">অ্যাকশন</th></tr></thead>
     <tbody>
-      <?php foreach ($apps as $a): ?>
+      <?php foreach ($apps as $a): $isWinget = ($a['install_type'] === 'winget'); ?>
         <tr>
           <td>
             <div style="display:flex;align-items:center;gap:10px">
               <span class="app-icon <?= e($a['color']) ?>" style="width:38px;height:38px;font-size:18px;border-radius:10px"><i class="bi <?= e($a['icon']) ?>"></i></span>
               <div><div style="font-weight:600"><?= e($a['name']) ?></div>
-              <?php if ($a['version']): ?><small style="color:var(--text-muted)">v<?= e($a['version']) ?></small><?php endif; ?></div>
+              <small style="color:var(--text-muted)"><?= e($a['category']) ?><?= $a['version'] ? ' · v'.e($a['version']) : '' ?></small></div>
             </div>
           </td>
-          <td><span class="badge-c badge-gray"><?= e($a['category']) ?></span></td>
-          <td style="color:var(--text-muted);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><code><?= e($a['network_path']) ?></code></td>
+          <td><?= $isWinget ? '<span class="badge-c badge-blue"><i class="bi bi-box"></i> winget</span>' : '<span class="badge-c badge-gray"><i class="bi bi-hdd-network"></i> নেটওয়ার্ক</span>' ?></td>
+          <td style="color:var(--text-muted);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><code><?= e($isWinget ? $a['winget_id'] : $a['network_path']) ?></code></td>
           <td style="color:var(--text-muted)"><code><?= e($a['silent_args'] ?: '—') ?></code></td>
           <td><?= $a['is_active'] ? '<span class="badge-c badge-green">চালু</span>' : '<span class="badge-c badge-red">বন্ধ</span>' ?></td>
           <td style="text-align:right;white-space:nowrap">
@@ -117,12 +110,29 @@ require __DIR__ . '/../../includes/header.php';
         <div class="form-group"><label class="form-label">ভার্সন</label><input class="form-control" name="version" id="a_ver" placeholder="120.0"></div>
       </div>
       <div class="form-group"><label class="form-label">বিবরণ</label><input class="form-control" name="description" id="a_desc" placeholder="দ্রুত ও নিরাপদ ওয়েব ব্রাউজার"></div>
+
       <div class="form-group">
-        <label class="form-label">নেটওয়ার্ক পাথ * <small style="color:var(--text-muted)">(ইনস্টলার ফাইল)</small></label>
-        <input class="form-control" name="network_path" id="a_path" required placeholder="Chrome\ChromeSetup.exe  অথবা  \\SERVER\Software\Chrome\ChromeSetup.exe">
+        <label class="form-label">ইনস্টলের ধরন *</label>
+        <select class="form-control" name="install_type" id="a_type" onchange="toggleType()">
+          <option value="network">নেটওয়ার্ক শেয়ার (ইনস্টলার ফাইল)</option>
+          <option value="winget">Winget (Windows Package Manager)</option>
+        </select>
       </div>
+
+      <!-- নেটওয়ার্ক পাথ (network হলে) -->
+      <div class="form-group" id="grp_path">
+        <label class="form-label">নেটওয়ার্ক পাথ * <small style="color:var(--text-muted)">(ইনস্টলার ফাইল)</small></label>
+        <input class="form-control" name="network_path" id="a_path" placeholder="Chrome\ChromeSetup.exe  অথবা  \\SERVER\Software\Chrome\ChromeSetup.exe">
+      </div>
+
+      <!-- winget ID (winget হলে) -->
+      <div class="form-group" id="grp_winget" style="display:none">
+        <label class="form-label">Winget ID * <small style="color:var(--text-muted)">(cmd-এ: winget search &lt;নাম&gt;)</small></label>
+        <input class="form-control" name="winget_id" id="a_winget" placeholder="যেমন: Google.Chrome  বা  7zip.7zip">
+      </div>
+
       <div class="form-group">
-        <label class="form-label">Silent Install আর্গুমেন্ট <small style="color:var(--text-muted)">(না দিলে সাধারণভাবে চলবে)</small></label>
+        <label class="form-label">Silent Install আর্গুমেন্ট <small style="color:var(--text-muted)" id="argsHint">(না দিলে সাধারণভাবে চলবে)</small></label>
         <input class="form-control" name="silent_args" id="a_args" placeholder="যেমন: /silent /install  অথবা  /qn">
       </div>
       <div class="grid grid-2">
@@ -151,12 +161,24 @@ require __DIR__ . '/../../includes/header.php';
 </div>
 
 <script>
+function toggleType(){
+  const w = document.getElementById('a_type').value === 'winget';
+  document.getElementById('grp_path').style.display   = w ? 'none' : '';
+  document.getElementById('grp_winget').style.display = w ? '' : 'none';
+  // required টগল
+  document.getElementById('a_path').required   = !w;
+  document.getElementById('a_winget').required = w;
+  document.getElementById('argsHint').textContent = w
+    ? '(winget-এ সাধারণত লাগে না — খালি রাখুন)'
+    : '(না দিলে সাধারণভাবে চলবে)';
+}
 function openAppModal(){
   document.getElementById('appModalTitle').textContent='নতুন অ্যাপ';
-  ['a_id','a_name','a_ver','a_desc','a_path','a_args'].forEach(i=>document.getElementById(i).value='');
+  ['a_id','a_name','a_ver','a_desc','a_path','a_winget','a_args'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('a_cat').value='General'; document.getElementById('a_sort').value=0;
   document.getElementById('a_icon').value='bi-app'; document.getElementById('a_color').value='blue';
-  document.getElementById('a_active').value='1';
+  document.getElementById('a_active').value='1'; document.getElementById('a_type').value='network';
+  toggleType();
   openModal('appModal');
 }
 function editApp(a){
@@ -165,13 +187,16 @@ function editApp(a){
   document.getElementById('a_name').value=a.name;
   document.getElementById('a_ver').value=a.version||'';
   document.getElementById('a_desc').value=a.description||'';
-  document.getElementById('a_path').value=a.network_path;
+  document.getElementById('a_type').value=a.install_type||'network';
+  document.getElementById('a_path').value=a.network_path||'';
+  document.getElementById('a_winget').value=a.winget_id||'';
   document.getElementById('a_args').value=a.silent_args||'';
   document.getElementById('a_cat').value=a.category||'General';
   document.getElementById('a_sort').value=a.sort_order;
   document.getElementById('a_icon').value=a.icon;
   document.getElementById('a_color').value=a.color;
   document.getElementById('a_active').value=a.is_active;
+  toggleType();
   openModal('appModal');
 }
 </script>

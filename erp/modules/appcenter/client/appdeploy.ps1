@@ -2,60 +2,75 @@
     ===============================================================
     App Center — Silent Install Helper (Windows)
     ===============================================================
-    এই স্ক্রিপ্টটি appdeploy:// প্রোটোকল হ্যান্ডেল করে।
-    ড্যাশবোর্ডের "Install" বাটনে ক্লিক করলে Windows এটি চালায়,
-    এটি সার্ভার থেকে ইনস্টলারের নেটওয়ার্ক পাথ নিয়ে silent ইনস্টল করে।
+    appdeploy:// প্রোটোকল হ্যান্ডেল করে। "Install" বাটনে ক্লিক করলে
+    Windows এটি চালায়। এটি সার্ভার থেকে ইনস্টল-তথ্য নিয়ে:
+      • network অ্যাপ  → নেটওয়ার্ক শেয়ারের ইনস্টলার silent চালায়
+      • winget অ্যাপ   → winget install চালায়
+    এবং কোন পিসি থেকে ইনস্টল হলো তা সার্ভারে লগ করে।
 
-    সেটআপ: SETUP.md দেখুন। শুধু নিচের $ServerUrl ঠিক করে দিন।
+    সেটআপ: SETUP.md দেখুন। শুধু নিচের $ServerUrl ঠিক করে দিন
+    (অথবা install-helper.bat চালালে নিজে থেকেই বসে যায়)।
 #>
 
 param([string]$Uri)
 
-# ---- আপনার সার্ভারের ঠিকানা এখানে দিন ----
+# ---- আপনার সার্ভারের ঠিকানা ----
 $ServerUrl = "http://YOUR-SERVER/erp"     # যেমন http://192.168.0.10/erp
 
-# ---- লগ ফাইল (সমস্যা হলে দেখতে) ----
 $LogFile = Join-Path $env:TEMP "appdeploy.log"
 function Log($m) { "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  $m" | Out-File -Append -FilePath $LogFile -Encoding utf8 }
+
+$logId = 0
+$api   = "$ServerUrl/modules/appcenter/api.php"
 
 try {
     Log "Called with URI: $Uri"
 
-    # appdeploy://<id>?t=<token>  থেকে id ও token বের করা
+    # appdeploy://<id>?t=<token>  থেকে id ও token
     $match = [regex]::Match($Uri, 'appdeploy://(?<id>\d+)\?t=(?<t>[a-fA-F0-9]+)')
     if (-not $match.Success) { throw "URI ফরম্যাট ঠিক নয়।" }
-
     $id    = $match.Groups['id'].Value
     $token = $match.Groups['t'].Value
+    $pc    = $env:COMPUTERNAME
 
-    # সার্ভার থেকে ইনস্টলারের তথ্য নেওয়া
-    $api  = "$ServerUrl/modules/appcenter/api.php?id=$id&t=$token"
-    Log "Querying API: $api"
-    $info = Invoke-RestMethod -Uri $api -TimeoutSec 20
-
+    # সার্ভার থেকে ইনস্টল-তথ্য (পিসির নামসহ, যা লগ হবে)
+    $info = Invoke-RestMethod -Uri "$api?id=$id&t=$token&pc=$pc" -TimeoutSec 20
     if (-not $info.ok) { throw "সার্ভার বলছে: $($info.error)" }
+    $logId = $info.log_id
+    Log "App: $($info.name) | Type: $($info.type) | PC: $pc | log_id: $logId"
 
-    $path = $info.path
-    $args = $info.args
-    Log "App: $($info.name) | Path: $path | Args: $args"
-
-    if (-not (Test-Path $path)) {
-        [System.Windows.Forms.MessageBox]::Show(
-            "ইনস্টলার ফাইল পাওয়া যায়নি:`n$path`n`nনেটওয়ার্ক শেয়ারে অ্যাক্সেস আছে কিনা দেখুন।",
-            "App Center", 'OK', 'Warning') | Out-Null
-        throw "File not found: $path"
+    # -------- ইনস্টল চালানো --------
+    if ($info.type -eq 'winget') {
+        # Windows Package Manager দিয়ে ইনস্টল
+        $wingetArgs = "install --id `"$($info.winget_id)`" --silent --accept-package-agreements --accept-source-agreements"
+        Log "Running: winget $wingetArgs"
+        $p = Start-Process -FilePath "winget" -ArgumentList $wingetArgs -Wait -PassThru -WindowStyle Hidden
+        if ($p.ExitCode -ne 0) { throw "winget exit code: $($p.ExitCode)" }
+    }
+    else {
+        # নেটওয়ার্ক শেয়ারের ইনস্টলার
+        $path = $info.path
+        if (-not (Test-Path $path)) { throw "ইনস্টলার ফাইল পাওয়া যায়নি: $path" }
+        if ([string]::IsNullOrWhiteSpace($info.args)) {
+            $p = Start-Process -FilePath $path -Wait -PassThru
+        } else {
+            $p = Start-Process -FilePath $path -ArgumentList $info.args -Wait -PassThru
+        }
+        if ($p.ExitCode -ne 0) { throw "installer exit code: $($p.ExitCode)" }
     }
 
-    # ইনস্টলার চালানো (silent args থাকলে সেগুলোসহ)
-    if ([string]::IsNullOrWhiteSpace($args)) {
-        Start-Process -FilePath $path -Wait
-    } else {
-        Start-Process -FilePath $path -ArgumentList $args -Wait
-    }
-    Log "Install finished: $($info.name)"
+    # সফল — সার্ভারে জানানো
+    Invoke-RestMethod -Uri $api -Method Post -Body @{ action='report'; id=$id; t=$token; log_id=$logId; status='success' } -TimeoutSec 15 | Out-Null
+    Log "SUCCESS: $($info.name)"
 }
 catch {
     Log "ERROR: $($_.Exception.Message)"
+    # ব্যর্থ — সার্ভারে জানানো (সম্ভব হলে)
+    try {
+        if ($logId -gt 0) {
+            Invoke-RestMethod -Uri $api -Method Post -Body @{ action='report'; id=$id; t=$token; log_id=$logId; status='failed'; note=$_.Exception.Message } -TimeoutSec 15 | Out-Null
+        }
+    } catch {}
     Add-Type -AssemblyName System.Windows.Forms
     [System.Windows.Forms.MessageBox]::Show(
         "ইনস্টল করা যায়নি।`n`n$($_.Exception.Message)`n`nবিস্তারিত: $LogFile",
