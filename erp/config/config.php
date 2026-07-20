@@ -18,6 +18,24 @@ define('DB_CHARSET', 'utf8mb4');
 define('APP_NAME', 'IT Admin ERP');
 
 /**
+ * ---- App Center (সফটওয়্যার ডিপ্লয়) সেটিংস ----
+ *
+ * NETWORK_SHARE_BASE:
+ *   যে নেটওয়ার্ক ফোল্ডারে সব ইনস্টলার রাখা আছে তার বেস UNC পাথ।
+ *   অ্যাডমিন প্যানেলে অ্যাপের relative path দিলে এর সাথে জোড়া লাগবে।
+ *   উদাহরণ: '\\\\FILESERVER\\Software'  (Windows share)
+ *   অ্যাপে full path (\\... দিয়ে শুরু) দিলে সেটাই সরাসরি ব্যবহার হবে।
+ */
+define('NETWORK_SHARE_BASE', '\\\\FILESERVER\\Software');
+
+/**
+ * APP_SECRET:
+ *   silent-install টোকেন সই করতে ব্যবহৃত গোপন কী।
+ *   ⚠️ লাইভে যাওয়ার আগে এটি একটি লম্বা random স্ট্রিং দিয়ে বদলান।
+ */
+define('APP_SECRET', 'change-this-to-a-long-random-secret-string');
+
+/**
  * BASE_URL — ব্রাউজারে অ্যাপের ঠিকানা।
  * নিচের কোড নিজে থেকে ঠিক করে নেবে (localhost/hosting দুটোতেই কাজ করবে)।
  */

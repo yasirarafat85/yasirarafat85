@@ -54,6 +54,9 @@ $permissions = [
     ['ইনভেন্টরি তৈরি',        'inventory.create', 'inventory'],
     ['ইনভেন্টরি এডিট',        'inventory.edit',   'inventory'],
     ['ইনভেন্টরি ডিলিট',       'inventory.delete', 'inventory'],
+    // module: app center (সফটওয়্যার ডিপ্লয়)
+    ['App Center দেখা/ইনস্টল', 'appcenter.view',   'appcenter'],
+    ['App যোগ/এডিট/ডিলিট',    'appcenter.manage', 'appcenter'],
 ];
 foreach ($permissions as [$name, $slug, $module]) {
     if (!$db->fetch("SELECT id FROM permissions WHERE slug = ?", [$slug])) {
@@ -69,8 +72,8 @@ foreach ($allPermIds as $pid) {
         $db->insert('role_permissions', ['role_id' => $superId, 'permission_id' => $pid]);
     }
 }
-// Manager-কে ইনভেন্টরি + dashboard দাও (উদাহরণ)
-$managerSlugs = ['dashboard.view', 'inventory.view', 'inventory.create', 'inventory.edit'];
+// Manager-কে ইনভেন্টরি + dashboard + App Center দাও (উদাহরণ)
+$managerSlugs = ['dashboard.view', 'inventory.view', 'inventory.create', 'inventory.edit', 'appcenter.view'];
 foreach ($managerSlugs as $slug) {
     $pid = $db->scalar("SELECT id FROM permissions WHERE slug = ?", [$slug]);
     if ($pid && !$db->fetch("SELECT 1 FROM role_permissions WHERE role_id = ? AND permission_id = ?", [$managerId, $pid])) {
@@ -81,12 +84,50 @@ foreach ($managerSlugs as $slug) {
 // ---------- Default Menus ----------
 if (!$db->fetch("SELECT id FROM menus LIMIT 1")) {
     $db->insert('menus', ['title' => 'Dashboard',  'url' => 'index.php',            'icon' => 'bi-speedometer2', 'permission' => 'dashboard.view', 'sort_order' => 1]);
-    $db->insert('menus', ['title' => 'Inventory',  'url' => 'modules/inventory/index.php', 'icon' => 'bi-box-seam', 'permission' => 'inventory.view', 'sort_order' => 2]);
+    $db->insert('menus', ['title' => 'App Center', 'url' => 'modules/appcenter/index.php', 'icon' => 'bi-grid-3x3-gap-fill', 'permission' => 'appcenter.view', 'sort_order' => 2]);
+    $db->insert('menus', ['title' => 'Inventory',  'url' => 'modules/inventory/index.php', 'icon' => 'bi-box-seam', 'permission' => 'inventory.view', 'sort_order' => 3]);
     $settingsId = $db->insert('menus', ['title' => 'Settings', 'url' => '#', 'icon' => 'bi-gear', 'permission' => null, 'sort_order' => 90]);
     $db->insert('menus', ['parent_id' => $settingsId, 'title' => 'Users',       'url' => 'users.php', 'icon' => 'bi-people',       'permission' => 'users.view',   'sort_order' => 1]);
     $db->insert('menus', ['parent_id' => $settingsId, 'title' => 'Roles',       'url' => 'roles.php', 'icon' => 'bi-shield-lock',  'permission' => 'roles.manage', 'sort_order' => 2]);
-    $db->insert('menus', ['parent_id' => $settingsId, 'title' => 'Menu Manager','url' => 'menus.php', 'icon' => 'bi-list-nested',  'permission' => 'menus.manage', 'sort_order' => 3]);
+    $db->insert('menus', ['parent_id' => $settingsId, 'title' => 'App Manager', 'url' => 'modules/appcenter/admin.php', 'icon' => 'bi-hdd-stack', 'permission' => 'appcenter.manage', 'sort_order' => 3]);
+    $db->insert('menus', ['parent_id' => $settingsId, 'title' => 'Menu Manager','url' => 'menus.php', 'icon' => 'bi-list-nested',  'permission' => 'menus.manage', 'sort_order' => 4]);
     $messages[] = 'Menus তৈরি হয়েছে';
+}
+
+// ---------- App Center: টেবিল + কিছু উদাহরণ অ্যাপ ----------
+$db->query("CREATE TABLE IF NOT EXISTS apps (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(120) NOT NULL,
+    description VARCHAR(255) DEFAULT NULL,
+    category VARCHAR(60) DEFAULT 'General',
+    icon VARCHAR(60) NOT NULL DEFAULT 'bi-app',
+    color VARCHAR(20) NOT NULL DEFAULT 'blue',
+    network_path VARCHAR(500) NOT NULL,
+    silent_args VARCHAR(255) DEFAULT NULL,
+    version VARCHAR(40) DEFAULT NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+if (!$db->fetch("SELECT id FROM apps LIMIT 1")) {
+    // এগুলো নমুনা — অ্যাডমিন প্যানেল থেকে নিজের নেটওয়ার্ক পাথ দিয়ে বদলে নিন
+    $sampleApps = [
+        ['Google Chrome', 'দ্রুত ও নিরাপদ ওয়েব ব্রাউজার', 'Browser',     'bi-google',        'red',    'Chrome\\ChromeSetup.exe',      '/silent /install', '120.0'],
+        ['Mozilla Firefox','ওপেন-সোর্স ব্রাউজার',           'Browser',     'bi-browser-firefox','orange', 'Firefox\\FirefoxSetup.exe',    '-ms',              '121.0'],
+        ['7-Zip',          'ফাইল compress/extract টুল',     'Utility',     'bi-file-zip',      'gray',   '7zip\\7z-setup.exe',           '/S',               '23.01'],
+        ['VLC Player',     'যেকোনো ভিডিও/অডিও প্লেয়ার',      'Media',       'bi-play-circle',   'orange', 'VLC\\vlc-setup.exe',           '/L=1033 /S',       '3.0'],
+        ['Adobe Reader',   'PDF পড়ার সফটওয়্যার',            'Document',    'bi-filetype-pdf',  'red',    'AdobeReader\\AcroRdrDC.exe',   '/sAll /rs',        'DC'],
+        ['AnyDesk',        'রিমোট ডেস্কটপ সাপোর্ট',          'Remote',      'bi-display',       'red',    'AnyDesk\\AnyDesk.exe',         '--install',        '8.0'],
+    ];
+    foreach ($sampleApps as $i => $a) {
+        $db->insert('apps', [
+            'name' => $a[0], 'description' => $a[1], 'category' => $a[2],
+            'icon' => $a[3], 'color' => $a[4], 'network_path' => $a[5],
+            'silent_args' => $a[6], 'version' => $a[7], 'sort_order' => $i + 1,
+        ]);
+    }
+    $messages[] = 'App Center-এ ৬টি নমুনা অ্যাপ যোগ হয়েছে';
 }
 
 // ---------- Default Super Admin User ----------

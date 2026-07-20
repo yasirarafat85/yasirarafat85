@@ -18,6 +18,7 @@ Menu ও Access Control সব রেডি থাকে, আর ডাটাব
 | 🧩 **Module System** | নতুন প্রজেক্ট = নতুন module ফোল্ডার, plug & play |
 | ⚙️ **Reusable DB Layer** | যেকোনো module এক লাইনে DB থেকে ডেটা নিতে পারে |
 | 🌙 **Dark / Light Mode** | প্রফেশনাল Filament-স্টাইল থিম |
+| 🚀 **App Center** | নেটওয়ার্ক শেয়ারের সফটওয়্যার এক ক্লিকে Install/Download |
 
 ---
 
@@ -91,6 +92,35 @@ $db->delete('tickets', 'id = ?', [$id]);
 
 ---
 
+## 🚀 App Center — সফটওয়্যার ডিপ্লয়মেন্ট
+
+নেটওয়ার্ক শেয়ারে রাখা ইনস্টলার (Chrome, 7-Zip, AnyDesk…) ইউজাররা
+ড্যাশবোর্ড থেকে সুন্দর বাটনে ক্লিক করে ইনস্টল/ডাউনলোড করতে পারে।
+
+- **অ্যাডমিন প্যানেল** (`Settings → App Manager`): অ্যাপের নাম, আইকন,
+  নেটওয়ার্ক পাথ ও silent-install আর্গুমেন্ট যোগ করুন।
+- **ফ্রন্টএন্ড** (`App Center` মেনু): অ্যাপ কার্ডের গ্রিড, প্রতিটিতে —
+  - ⚡ **Install** — সত্যিকার silent one-click (helper সেটআপ থাকলে)
+  - ⬇️ **Download** — ইনস্টলার নামিয়ে রান (সব পিসিতে চলে)
+  - 📋 **Copy Path** — নেটওয়ার্ক পাথ কপি
+
+**বেস শেয়ার সেট করুন** `config/config.php`-এ:
+```php
+define('NETWORK_SHARE_BASE', '\\\\FILESERVER\\Software');
+define('APP_SECRET', 'একটি-লম্বা-random-গোপন-স্ট্রিং');   // লাইভে বদলান
+```
+
+> ⚡ **Silent one-click** চালাতে প্রতিটি Windows পিসিতে একবার ছোট helper
+> সেটআপ লাগে — দেখুন `modules/appcenter/client/SETUP.md`।
+> (Download বাটন helper ছাড়াই কাজ করে।)
+
+**কেন ব্রাউজার সরাসরি exe চালায় না?** নিরাপত্তার কারণে ব্রাউজার
+ক্লায়েন্ট পিসিতে প্রোগ্রাম চালাতে পারে না। তাই Install বাটন Windows-এ
+রেজিস্টার করা `appdeploy://` প্রোটোকল দিয়ে একটা helper চালায়, যা সার্ভার
+থেকে (token যাচাই করে) পাথ নিয়ে silent ইনস্টল করে — এটাই এন্টারপ্রাইজ পদ্ধতি।
+
+---
+
 ## 📁 ফোল্ডার কাঠামো
 
 ```
@@ -111,7 +141,13 @@ erp/
 ├── index.php                 # ড্যাশবোর্ড
 ├── users.php  roles.php  menus.php   # কোর ব্যবস্থাপনা
 └── modules/
-    └── inventory/index.php   # উদাহরণ module (কপি করে নতুন বানান)
+    ├── inventory/index.php    # উদাহরণ module (কপি করে নতুন বানান)
+    └── appcenter/            # সফটওয়্যার ডিপ্লয়মেন্ট module
+        ├── index.php         # ফ্রন্টএন্ড অ্যাপ গ্রিড
+        ├── admin.php         # অ্যাপ যোগ/এডিট/ডিলিট
+        ├── download.php      # ইনস্টলার স্ট্রিম করে
+        ├── api.php           # helper-কে পাথ দেয় (token সুরক্ষিত)
+        └── client/           # Windows helper (.reg + .ps1 + SETUP.md)
 ```
 
 ---
