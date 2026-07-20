@@ -85,6 +85,50 @@ $ServerUrl = "http://192.168.0.10/erp"
 
 ---
 
+## 🔐 স্ট্যান্ডার্ড ইউজার পিসি (admin ছাড়া install/update/uninstall)
+
+উপরের সহজ mode (bat) admin ইউজার বা winget user-scope-এর জন্য। কিন্তু
+আপনার পিসিগুলো যদি **স্ট্যান্ডার্ড ইউজার** হয় (Program Files/রেজিস্ট্রিতে
+লিখতে admin লাগে), তাহলে একটা **privileged runner** দরকার — ঠিক যেভাবে
+Windows Update একটা SYSTEM সার্ভিস দিয়ে কাজ করে।
+
+**কীভাবে কাজ করে:**
+```
+স্ট্যান্ডার্ড ইউজার Install চাপে
+   → dispatcher অনুরোধ queue-তে লেখে
+   → AppDeployRunner টাস্ক (SYSTEM/admin) trigger করে
+        ↓ (elevated — admin ছাড়াই)
+   → worker: সার্ভার API → winget/installer চালায় → লগ করে ✅
+```
+
+**সেটআপ (admin একবার, PowerShell "Run as administrator"):**
+
+দুই পদ্ধতিই সাপোর্টেড — পিসিভেদে যেটা দরকার:
+
+```powershell
+# পদ্ধতি ১ — SYSTEM হিসেবে (সুপারিশ; পাসওয়ার্ড লাগে না)
+.\setup-elevation.ps1 -Server "http://192.168.0.10/erp" -RunAs system
+
+# পদ্ধতি ২ — আপনার admin অ্যাকাউন্টে (Windows পাসওয়ার্ড নিরাপদে রাখে)
+.\setup-elevation.ps1 -Server "http://192.168.0.10/erp" -RunAs admin
+```
+
+এটি করবে: স্ক্রিপ্ট `C:\ProgramData\AppDeploy`-তে কপি, `appdeploy://`
+প্রোটোকল (সব ইউজারের জন্য) রেজিস্টার, আর `AppDeployRunner` টাস্ক তৈরি
+যা স্ট্যান্ডার্ড ইউজার trigger করতে পারবে কিন্তু চলবে elevated হয়ে।
+
+> 🔒 **নিরাপত্তা:** কোনো পদ্ধতিতেই প্লেইন পাসওয়ার্ড ডিস্কে থাকে না।
+> SYSTEM-এ পাসওয়ার্ডই লাগে না; admin-মোডে Windows নিজে ক্রেডেনশিয়াল
+> নিরাপদে রাখে (task-এর ভেতর, LSA secret হিসেবে)। token সুরক্ষা অটুট।
+
+> ⚠️ Windows স্ক্রিপ্টগুলো (`.ps1`) আপনার একটা টেস্ট পিসিতে যাচাই করে
+> নিন — পরিবেশভেদে ছোটখাটো সমন্বয় লাগতে পারে (যেমন টাস্কের run-অনুমতি)।
+
+**দরকারি ৪টি ফাইল:** `appdeploy.ps1`, `appdeploy-worker.ps1`,
+`setup-elevation.ps1` (standard-user মোড), `install-helper.bat` (simple মোড)।
+
+---
+
 ## 📦 Winget অ্যাপ প্রসঙ্গে
 winget-ধরনের অ্যাপে ব্রাউজার থেকেই **৩টি কাজ** করা যায় — helper নিজেই
 সঠিক winget কমান্ড চালায়:
