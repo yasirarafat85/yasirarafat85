@@ -62,8 +62,14 @@ echo [1/5] Folder toiri: %HELPERDIR%
 if not exist "%HELPERDIR%" mkdir "%HELPERDIR%"
 
 echo [2/5] Script copy kora hocche...
+REM  age-r run-e file gulo hidden thakle copy /Y "Access denied" dey,
+REM  tai copy-r age hidden/readonly attribute soriye ni:
+attrib -h -r "%HELPERDIR%\appdeploy.ps1"        >nul 2>&1
+attrib -h -r "%HELPERDIR%\appdeploy-worker.ps1" >nul 2>&1
 copy /Y "%~dp0appdeploy.ps1"        "%HELPERDIR%\appdeploy.ps1" >nul
+if errorlevel 1 echo    [WARN] appdeploy.ps1 copy failed - AppDeploy folder delete kore abar cholan.
 copy /Y "%~dp0appdeploy-worker.ps1" "%HELPERDIR%\appdeploy-worker.ps1" >nul
+if errorlevel 1 echo    [WARN] appdeploy-worker.ps1 copy failed - AppDeploy folder delete kore abar cholan.
 
 echo [3/5] Server URL config.json e bosano hocche: %SERVERURL%
 powershell -NoProfile -Command "@{server='%SERVERURL%'} | ConvertTo-Json | Set-Content -Path '%HELPERDIR%\config.json' -Encoding utf8"
