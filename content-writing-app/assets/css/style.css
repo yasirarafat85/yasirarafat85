@@ -1,0 +1,89 @@
+/* assets/css/style.css — অ্যাপের কাস্টম স্টাইল */
+
+:root {
+    --brand: #6b4e9e;
+    --brand-dark: #543d80;
+    --accent: #e8577f;
+    --soft: #f6f3fb;
+}
+
+body {
+    font-family: 'Hind Siliguri', system-ui, sans-serif;
+    background: var(--soft);
+    color: #2b2b33;
+}
+
+.app-navbar {
+    background: linear-gradient(90deg, var(--brand), var(--accent));
+}
+
+.app-navbar .nav-link { font-weight: 500; }
+
+.card {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(107, 78, 158, .08);
+}
+
+.card-title { color: var(--brand-dark); font-weight: 600; }
+
+.btn-brand {
+    background: var(--brand);
+    color: #fff;
+    border-radius: 10px;
+    font-weight: 500;
+}
+.btn-brand:hover { background: var(--brand-dark); color: #fff; }
+
+.btn-accent {
+    background: var(--accent);
+    color: #fff;
+    border-radius: 10px;
+    font-weight: 500;
+}
+.btn-accent:hover { background: #cf3f68; color: #fff; }
+
+.stat-tile {
+    background: #fff;
+    border-radius: 16px;
+    padding: 1.2rem;
+    text-align: center;
+    box-shadow: 0 4px 16px rgba(107, 78, 158, .08);
+}
+.stat-tile .num { font-size: 2rem; font-weight: 700; color: var(--brand); }
+.stat-tile .lbl { color: #6c757d; font-size: .9rem; }
+
+.example-box {
+    background: var(--soft);
+    border-left: 4px solid var(--brand);
+    border-radius: 8px;
+    padding: 1rem;
+    white-space: pre-wrap;
+}
+
+.challenge-box {
+    background: #fff6f9;
+    border: 1px dashed var(--accent);
+    border-radius: 12px;
+    padding: 1rem 1.2rem;
+}
+
+.tips-list { white-space: pre-wrap; }
+
+.draft-output {
+    background: #fff;
+    border: 1px solid #e5ddef;
+    border-radius: 12px;
+    padding: 1rem;
+    white-space: pre-wrap;
+}
+
+.app-footer { background: #fff; border-top: 1px solid #eee; }
+
+.category-badge {
+    background: var(--brand);
+    color: #fff;
+    font-size: .75rem;
+    padding: .2rem .6rem;
+    border-radius: 20px;
+}
