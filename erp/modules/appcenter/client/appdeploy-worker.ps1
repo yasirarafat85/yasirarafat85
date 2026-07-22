@@ -38,7 +38,8 @@ try {
 } catch {
     Log "FATAL: cannot read config.json: $($_.Exception.Message)"; return
 }
-$api = "$server/modules/appcenter/api.php"
+# script-scoped so the Invoke-Request function always sees it
+$script:api = "$server/modules/appcenter/api.php"
 
 # find winget.exe (may not be on PATH, esp. under SYSTEM)
 function Find-Winget {
@@ -61,7 +62,9 @@ function Invoke-Request($file) {
         $action = if ($r.action) { $r.action } else { 'install' }
         $pc     = $env:COMPUTERNAME
 
-        $url = "$api?id=$id&t=$token&a=$action&pc=$pc"
+        # build with -f so nothing is dropped (avoid "$api?" interpolation issues)
+        $url = '{0}?id={1}&t={2}&a={3}&pc={4}' -f $script:api, $id, $token, $action, $pc
+        Log "api base: $script:api"
         Log "calling API: $url"
         try {
             $info = Invoke-RestMethod -Uri $url -TimeoutSec 20
@@ -121,7 +124,7 @@ function Invoke-Request($file) {
             if ($p.ExitCode -ne 0) { throw "installer exit code: $($p.ExitCode)" }
         }
 
-        Invoke-RestMethod -Uri $api -Method Post -Body @{ action='report'; id=$id; t=$token; log_id=$logId; status='success' } -TimeoutSec 15 | Out-Null
+        Invoke-RestMethod -Uri $script:api -Method Post -Body @{ action='report'; id=$id; t=$token; log_id=$logId; status='success' } -TimeoutSec 15 | Out-Null
         Log "RESULT: SUCCESS - $($info.name)"
     }
     catch {
@@ -129,7 +132,7 @@ function Invoke-Request($file) {
         Log "RESULT: FAILED - $msg"
         try {
             if ($logId -gt 0) {
-                Invoke-RestMethod -Uri $api -Method Post -Body @{ action='report'; id=$id; t=$token; log_id=$logId; status='failed'; note=$msg } -TimeoutSec 15 | Out-Null
+                Invoke-RestMethod -Uri $script:api -Method Post -Body @{ action='report'; id=$id; t=$token; log_id=$logId; status='failed'; note=$msg } -TimeoutSec 15 | Out-Null
                 Log "reported failure to server (log_id=$logId)"
             } else {
                 Log "no log_id - failure not reported to server (never reached API)."
