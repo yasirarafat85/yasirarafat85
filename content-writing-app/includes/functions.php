@@ -74,15 +74,21 @@ function clean(string $s): string
 function encrypt_key(string $plain): string
 {
     if ($plain === '') return '';
-    $iv = substr(hash('sha256', APP_SECRET), 0, 16);
-    return base64_encode(openssl_encrypt($plain, 'AES-256-CBC', APP_SECRET, 0, $iv));
+    $key = hash('sha256', APP_SECRET, true);      // ৩২ বাইট চাবি
+    $iv  = random_bytes(16);                        // প্রতিবার নতুন র‍্যান্ডম IV
+    $cipher = openssl_encrypt($plain, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, $iv);
+    return base64_encode($iv . $cipher);           // IV সাইফারটেক্সটের সাথে জুড়ে রাখা
 }
 
 function decrypt_key(string $enc): string
 {
     if ($enc === '') return '';
-    $iv = substr(hash('sha256', APP_SECRET), 0, 16);
-    return (string)openssl_decrypt(base64_decode($enc), 'AES-256-CBC', APP_SECRET, 0, $iv);
+    $key  = hash('sha256', APP_SECRET, true);
+    $data = base64_decode($enc, true);
+    if ($data === false || strlen($data) < 17) return '';
+    $iv     = substr($data, 0, 16);                // শুরুর ১৬ বাইট = IV
+    $cipher = substr($data, 16);
+    return (string)openssl_decrypt($cipher, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, $iv);
 }
 
 // key masked করে দেখানো (যেমন sk-...abcd)

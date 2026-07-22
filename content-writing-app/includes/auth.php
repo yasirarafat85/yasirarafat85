@@ -3,6 +3,12 @@
 // প্রতিটা পেজের শুরুতে এই ফাইলটি require করবে।
 
 if (session_status() === PHP_SESSION_NONE) {
+    // সেশন কুকি হার্ডেনিং: JS থেকে পড়া যাবে না, cross-site পাঠানো সীমিত
+    session_set_cookie_params([
+        'httponly' => true,
+        'samesite' => 'Lax',
+        'secure'   => !empty($_SERVER['HTTPS']),  // HTTPS হলে শুধু HTTPS-এ পাঠাবে
+    ]);
     session_start();
 }
 

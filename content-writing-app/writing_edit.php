@@ -25,7 +25,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_save'])) {
 
     if (!$errors) {
         $wc = count_words($body);
-        $catVal = $categoryId ?: null;
+        // ক্যাটাগরি সত্যিই আছে কিনা যাচাই — না থাকলে null (FK এরর ঠেকাতে)
+        $catVal = null;
+        if ($categoryId) {
+            $chk = db()->prepare('SELECT 1 FROM categories WHERE id = ?');
+            $chk->execute([$categoryId]);
+            if ($chk->fetch()) $catVal = $categoryId;
+        }
         if ($id) {
             // মালিকানা যাচাই — শুধু নিজের লেখা এডিট করা যাবে
             $own = db()->prepare('SELECT user_id FROM writings WHERE id = ?');

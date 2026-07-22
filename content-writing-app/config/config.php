@@ -1,9 +1,14 @@
 <?php
 // config/config.php — অ্যাপের কেন্দ্রীয় সেটিংস
 
-// ত্রুটি দেখানো (ডেভেলপমেন্টের সময় সুবিধাজনক; লাইভে false করবে)
-ini_set('display_errors', 1);
+// ডেভেলপমেন্ট মোড — লাইভে (production) অবশ্যই false করবে
+define('DEBUG', true);
+
+// ত্রুটি: DEBUG হলে স্ক্রিনে দেখাও; নাহলে লুকাও (পাথ/তথ্য ফাঁস ঠেকাতে)।
+// যেকোনো অবস্থাতেই লগে রেকর্ড থাকে।
 error_reporting(E_ALL);
+ini_set('display_errors', DEBUG ? '1' : '0');
+ini_set('log_errors', '1');
 
 // অ্যাপের নাম
 define('APP_NAME', 'কনটেন্ট রাইটিং একাডেমি');

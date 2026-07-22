@@ -1,6 +1,14 @@
 <?php
 // partials/header.php — <head>, ন্যাভবার ও flash বার্তা
 // পেজ include করার আগে চাইলে সেট করতে পারে: $pageTitle, $base
+
+// নিরাপত্তা হেডার (আউটপুট শুরুর আগে পাঠাতে হয়)
+if (!headers_sent()) {
+    header('X-Content-Type-Options: nosniff');       // MIME sniffing বন্ধ
+    header('X-Frame-Options: SAMEORIGIN');            // clickjacking ঠেকায়
+    header('Referrer-Policy: strict-origin-when-cross-origin');
+}
+
 $base = $base ?? '';                 // auth/ সাবফোল্ডার হলে '../' দেবে
 $pageTitle = $pageTitle ?? APP_NAME;
 $u = current_user();
