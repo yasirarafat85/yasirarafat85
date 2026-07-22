@@ -42,4 +42,37 @@ function appcenter_ensure_schema(Database $db): void
         note VARCHAR(255) DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    // ---- settings (key-value; শেয়ার পাথ ইত্যাদি Settings থেকে বদলানো যায়) ----
+    $db->query("CREATE TABLE IF NOT EXISTS settings (
+        skey   VARCHAR(80) PRIMARY KEY,
+        svalue TEXT
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+}
+
+/** একটি সেটিং পড়া (না থাকলে default) */
+function setting_get(Database $db, string $key, ?string $default = null): ?string
+{
+    $row = $db->fetch("SELECT svalue FROM settings WHERE skey = ?", [$key]);
+    return $row ? $row['svalue'] : $default;
+}
+
+/** একটি সেটিং সংরক্ষণ (থাকলে আপডেট, নইলে নতুন) */
+function setting_set(Database $db, string $key, string $value): void
+{
+    if ($db->fetch("SELECT skey FROM settings WHERE skey = ?", [$key])) {
+        $db->update('settings', ['svalue' => $value], 'skey = ?', [$key]);
+    } else {
+        $db->insert('settings', ['skey' => $key, 'svalue' => $value]);
+    }
+}
+
+/**
+ * App Center-এর আপলোড/শেয়ার বেস পাথ।
+ * আগে Settings-এ সংরক্ষিত মান, নইলে config.php-এর NETWORK_SHARE_BASE।
+ */
+function appcenter_share_path(Database $db): string
+{
+    $p = setting_get($db, 'appcenter_share_path', NETWORK_SHARE_BASE);
+    return rtrim($p, '\\/');
 }

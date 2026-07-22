@@ -91,9 +91,10 @@ if (!$db->fetch("SELECT id FROM menus LIMIT 1")) {
     $settingsId = $db->insert('menus', ['title' => 'Settings', 'url' => '#', 'icon' => 'bi-gear', 'permission' => null, 'sort_order' => 90]);
     $db->insert('menus', ['parent_id' => $settingsId, 'title' => 'Users',       'url' => 'users.php', 'icon' => 'bi-people',       'permission' => 'users.view',   'sort_order' => 1]);
     $db->insert('menus', ['parent_id' => $settingsId, 'title' => 'Roles',       'url' => 'roles.php', 'icon' => 'bi-shield-lock',  'permission' => 'roles.manage', 'sort_order' => 2]);
-    $db->insert('menus', ['parent_id' => $settingsId, 'title' => 'App Manager', 'url' => 'modules/appcenter/admin.php', 'icon' => 'bi-hdd-stack', 'permission' => 'appcenter.manage', 'sort_order' => 3]);
-    $db->insert('menus', ['parent_id' => $settingsId, 'title' => 'Install Logs','url' => 'modules/appcenter/logs.php',  'icon' => 'bi-clock-history', 'permission' => 'appcenter.manage', 'sort_order' => 4]);
-    $db->insert('menus', ['parent_id' => $settingsId, 'title' => 'Menu Manager','url' => 'menus.php', 'icon' => 'bi-list-nested',  'permission' => 'menus.manage', 'sort_order' => 5]);
+    $db->insert('menus', ['parent_id' => $settingsId, 'title' => 'App Manager',   'url' => 'modules/appcenter/admin.php',    'icon' => 'bi-hdd-stack',     'permission' => 'appcenter.manage', 'sort_order' => 3]);
+    $db->insert('menus', ['parent_id' => $settingsId, 'title' => 'App Settings',  'url' => 'modules/appcenter/settings.php', 'icon' => 'bi-sliders',       'permission' => 'appcenter.manage', 'sort_order' => 4]);
+    $db->insert('menus', ['parent_id' => $settingsId, 'title' => 'Install Logs',  'url' => 'modules/appcenter/logs.php',     'icon' => 'bi-clock-history', 'permission' => 'appcenter.manage', 'sort_order' => 5]);
+    $db->insert('menus', ['parent_id' => $settingsId, 'title' => 'Menu Manager',  'url' => 'menus.php', 'icon' => 'bi-list-nested', 'permission' => 'menus.manage', 'sort_order' => 6]);
     $messages[] = 'Menus তৈরি হয়েছে';
 }
 
