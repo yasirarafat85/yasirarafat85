@@ -30,11 +30,16 @@ try {
     Log "URI: $Uri"
 
     # appdeploy://<id>?t=<token>&a=<action>
-    $m = [regex]::Match($Uri, 'appdeploy://(?<id>\d+)\?t=(?<t>[a-fA-F0-9]+)(&a=(?<a>\w+))?')
-    if (-not $m.Success) { throw "Bad URI format." }
-    $id     = $m.Groups['id'].Value
-    $token  = $m.Groups['t'].Value
-    $action = if ($m.Groups['a'].Success) { $m.Groups['a'].Value } else { 'install' }
+    # Windows may normalize "appdeploy://4" to "appdeploy://4/?..." (id is the
+    # host, so a trailing slash gets added). Parse each part leniently instead
+    # of matching one fixed shape.
+    $id     = ([regex]::Match($Uri, 'appdeploy://0*(\d+)')).Groups[1].Value
+    $token  = ([regex]::Match($Uri, '[?&]t=([a-fA-F0-9]+)')).Groups[1].Value
+    $am     = [regex]::Match($Uri, '[?&]a=(\w+)')
+    $action = if ($am.Success) { $am.Groups[1].Value } else { 'install' }
+    if ([string]::IsNullOrEmpty($id) -or [string]::IsNullOrEmpty($token)) {
+        throw "Bad URI format: $Uri"
+    }
 
     # write request into the queue
     New-Item -ItemType Directory -Force -Path $queue | Out-Null
