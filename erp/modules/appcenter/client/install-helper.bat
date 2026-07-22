@@ -70,6 +70,10 @@ copy /Y "%~dp0appdeploy.ps1"        "%HELPERDIR%\appdeploy.ps1" >nul
 if errorlevel 1 echo    [WARN] appdeploy.ps1 copy failed - AppDeploy folder delete kore abar cholan.
 copy /Y "%~dp0appdeploy-worker.ps1" "%HELPERDIR%\appdeploy-worker.ps1" >nul
 if errorlevel 1 echo    [WARN] appdeploy-worker.ps1 copy failed - AppDeploy folder delete kore abar cholan.
+if exist "%~dp0appdeploy-test.ps1" (
+  attrib -h -r "%HELPERDIR%\appdeploy-test.ps1" >nul 2>&1
+  copy /Y "%~dp0appdeploy-test.ps1" "%HELPERDIR%\appdeploy-test.ps1" >nul
+)
 
 echo [3/5] Server URL config.json e bosano hocche: %SERVERURL%
 powershell -NoProfile -Command "@{server='%SERVERURL%'} | ConvertTo-Json | Set-Content -Path '%HELPERDIR%\config.json' -Encoding utf8"

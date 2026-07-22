@@ -51,12 +51,18 @@ try {
     # ---- elevation routing ----
     $null = & schtasks.exe /query /tn "AppDeployRunner" 2>$null
     if ($LASTEXITCODE -eq 0) {
-        Log "Runner task found -> trigger"
+        Log "Runner task found -> trigger (elevated)"
         & schtasks.exe /run /tn "AppDeployRunner" | Out-Null
+        Log "task triggered; see worker.log for the install result"
     }
     else {
-        Log "No runner task -> run worker directly (current context)"
-        & (Join-Path $base 'appdeploy-worker.ps1') -ProcessQueue
+        $worker = Join-Path $base 'appdeploy-worker.ps1'
+        if (-not (Test-Path $worker)) {
+            throw "worker script missing: $worker  (copy failed? delete the AppDeploy folder and re-run the installer)"
+        }
+        Log "No runner task -> run worker directly (current user context)"
+        & $worker -ProcessQueue
+        Log "worker finished; see worker.log for details"
     }
 }
 catch {
