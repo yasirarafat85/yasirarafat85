@@ -14,6 +14,8 @@
 param([string]$Uri)
 
 $Server = "http://YOUR-SERVER/erp"     # install-helper.bat replaces this line
+# tolerate a pasted dashboard URL: keep only up to the erp root
+$Server = $Server -replace '/modules/.*$', '' -replace '/index\.php.*$', '' -replace '/+$', ''
 
 $log = Join-Path $env:TEMP 'appdeploy.log'
 function Log($m) { "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  $m" | Out-File -Append -FilePath $log -Encoding utf8 }
