@@ -7,14 +7,24 @@
  *  অ্যাপের path DB-তে থাকে, ফাইল থাকে নেটওয়ার্ক শেয়ারে।
  */
 require_once __DIR__ . '/../../bootstrap.php';
-Auth::requirePermission('appcenter.view');
+require_once __DIR__ . '/_schema.php';
 
 $pageTitle = 'App Center';
 $db = Database::getInstance();
-
-// টেবিল/কলাম নিশ্চিত করা (winget ও install_logs সহ)
-require_once __DIR__ . '/_schema.php';
 appcenter_ensure_schema($db);
+
+/**
+ * Guest mode — Settings-এ চালু থাকলে লগইন ছাড়াই App Center দেখা ও
+ * Install/Download করা যায়, তবে manage করা যায় না।
+ */
+$guest = false;
+if (Auth::check()) {
+    Auth::requirePermission('appcenter.view');
+} elseif (setting_get($db, 'appcenter_guest', '0') === '1') {
+    $guest = true;
+} else {
+    redirect('auth/login.php');
+}
 
 // সার্চ ও ক্যাটাগরি ফিল্টার
 $q   = trim(input('q', ''));
@@ -27,7 +37,33 @@ if ($cat !== '') { $where .= " AND category = ?"; $params[] = $cat; }
 $apps = $db->fetchAll("SELECT * FROM apps WHERE $where ORDER BY sort_order, name", $params);
 $categories = array_column($db->fetchAll("SELECT DISTINCT category FROM apps WHERE is_active = 1 ORDER BY category"), 'category');
 
-require __DIR__ . '/../../includes/header.php';
+if (!$guest) {
+    require __DIR__ . '/../../includes/header.php';
+} else {
+    // ---- লগইন ছাড়া guest layout (সাইডবার নেই) ----
+    ?><!DOCTYPE html>
+<html lang="bn" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>App Center — <?= APP_NAME ?></title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="<?= url('assets/css/app.css') ?>">
+</head>
+<body style="background:var(--bg-secondary)">
+  <header class="topbar" style="position:sticky;top:0;z-index:30">
+    <div class="left" style="display:flex;align-items:center;gap:11px">
+      <div class="logo" style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800"><?= strtoupper(substr(APP_NAME,0,1)) ?></div>
+      <h2 style="font-size:18px">App Center</h2>
+    </div>
+    <div class="left" style="gap:12px;display:flex;align-items:center">
+      <button class="icon-btn" id="theme-toggle" aria-label="Theme"><i class="bi bi-moon-stars"></i></button>
+      <a class="btn btn-ghost btn-sm" href="<?= url('auth/login.php') ?>"><i class="bi bi-box-arrow-in-right"></i> অ্যাডমিন লগইন</a>
+    </div>
+  </header>
+  <main class="content" style="max-width:1180px;margin:0 auto;padding:28px 26px">
+<?php }
 ?>
 <div class="page-head">
   <div><h1>App Center</h1><div class="sub">এক ক্লিকে সফটওয়্যার ইনস্টল বা ডাউনলোড করুন</div></div>
@@ -170,4 +206,23 @@ document.querySelectorAll('.app-install').forEach(a=>{
   });
 });
 </script>
+<?php if (!$guest): ?>
 <?php require __DIR__ . '/../../includes/footer.php'; ?>
+<?php else: ?>
+  </main>
+  <script>
+    // guest layout — শুধু থিম টগল
+    const html = document.documentElement, tt = document.getElementById('theme-toggle');
+    if (localStorage.getItem('theme') === 'dark' ||
+       (!localStorage.getItem('theme') && matchMedia('(prefers-color-scheme: dark)').matches)) html.setAttribute('data-theme','dark');
+    function syncIcon(){ tt.querySelector('i').className = html.getAttribute('data-theme')==='dark' ? 'bi bi-sun' : 'bi bi-moon-stars'; }
+    syncIcon();
+    tt?.addEventListener('click', () => {
+      const dark = html.getAttribute('data-theme') === 'dark';
+      html.setAttribute('data-theme', dark ? 'light' : 'dark');
+      localStorage.setItem('theme', dark ? 'light' : 'dark'); syncIcon();
+    });
+  </script>
+</body>
+</html>
+<?php endif; ?>

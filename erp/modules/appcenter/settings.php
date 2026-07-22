@@ -17,12 +17,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('error', 'শেয়ার পাথ খালি রাখা যাবে না।');
     } else {
         setting_set($db, 'appcenter_share_path', $path);
-        flash('success', 'শেয়ার পাথ সংরক্ষিত হয়েছে।');
+        setting_set($db, 'appcenter_guest', input('guest') ? '1' : '0');
+        flash('success', 'সেটিংস সংরক্ষিত হয়েছে।');
     }
     redirect('modules/appcenter/settings.php');
 }
 
 $sharePath = appcenter_share_path($db);
+$guestOn   = setting_get($db, 'appcenter_guest', '0') === '1';
 
 // পাথটি লেখা যায় কিনা পরীক্ষা (আপলোড কাজ করবে কিনা বোঝাতে)
 $writable = is_dir($sharePath) && is_writable($sharePath);
@@ -62,9 +64,30 @@ require __DIR__ . '/../../includes/header.php';
       <?php endif; ?>
     </div>
 
+    <!-- Guest mode -->
+    <div class="form-group" style="margin-top:20px;padding-top:18px;border-top:1px solid var(--border)">
+      <label class="check" style="align-items:flex-start">
+        <input type="checkbox" name="guest" value="1" <?= $guestOn ? 'checked' : '' ?> style="margin-top:3px">
+        <span>
+          <b>Guest mode চালু করুন</b><br>
+          <small style="color:var(--text-muted)">চালু থাকলে ইউজাররা <b>লগইন ছাড়াই</b> App Center পেজ দেখে
+          Install/Download করতে পারবে — কিন্তু অ্যাপ manage/এডিট করতে পারবে না।
+          বন্ধ থাকলে লগইন লাগবে।</small>
+        </span>
+      </label>
+    </div>
+
     <button class="btn btn-success" style="margin-top:8px"><i class="bi bi-check-lg"></i> সংরক্ষণ করুন</button>
   </form>
 </div>
+
+<?php if ($guestOn): ?>
+<div class="card-c" style="max-width:720px;margin-top:14px;background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.3)">
+  <div style="font-size:14px">✅ Guest link (লগইন ছাড়া): <br>
+    <code style="font-size:12.5px"><?= e(rtrim((isset($_SERVER['HTTPS'])&&$_SERVER['HTTPS']!=='off'?'https':'http').'://'.$_SERVER['HTTP_HOST'].BASE_URL,'/')) ?>/modules/appcenter/index.php</code>
+  </div>
+</div>
+<?php endif; ?>
 
 <div class="card-c" style="max-width:720px;margin-top:18px">
   <h3 style="font-size:15px;margin-bottom:10px"><i class="bi bi-info-circle"></i> কীভাবে কাজ করে</h3>

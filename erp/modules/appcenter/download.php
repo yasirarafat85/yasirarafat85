@@ -5,10 +5,15 @@
  */
 require_once __DIR__ . '/../../bootstrap.php';
 require_once __DIR__ . '/_schema.php';
-Auth::requirePermission('appcenter.view');
 
 $db  = Database::getInstance();
 appcenter_ensure_schema($db);
+
+// guest mode চালু থাকলে লগইন ছাড়াই ডাউনলোড, নইলে permission লাগবে
+if (!Auth::check() && setting_get($db, 'appcenter_guest', '0') !== '1') {
+    Auth::requirePermission('appcenter.view');
+}
+
 $id  = (int) input('id');
 $app = $db->fetch("SELECT * FROM apps WHERE id = ? AND is_active = 1", [$id]);
 
