@@ -1,20 +1,24 @@
 <#
     ===============================================================
-    App Center — Worker (আসল কাজ যে করে)
+    App Center - Worker (does the actual work)
     ===============================================================
-    এটি elevated context-এ চলে (SYSTEM Scheduled Task বা admin account),
-    তাই স্ট্যান্ডার্ড ইউজারের পিসিতেও admin ছাড়াই install/update/uninstall
-    করতে পারে — ঠিক Windows Update-এর SYSTEM সার্ভিসের মতো।
+    Runs in an elevated context (SYSTEM Scheduled Task or admin
+    account), so it can install/update/uninstall on standard-user
+    PCs without admin - the same idea as the Windows Update SYSTEM
+    service.
 
-    কাজ: queue ফোল্ডারের অনুরোধ পড়ে → সার্ভার API থেকে তথ্য নেয় →
-         winget/installer চালায় → ফলাফল সার্ভারে লগ করে।
+    Job: read requests from the queue folder -> ask the server API
+         for details -> run winget/installer -> report the result.
 
-    সরাসরি চালাবেন না — appdeploy.ps1 (dispatcher) বা Scheduled Task
-    এটিকে ডাকে। কনফিগ আসে পাশের config.json থেকে।
+    Do not run directly - appdeploy.ps1 (dispatcher) or the
+    Scheduled Task invokes it. Config comes from config.json.
+
+    NOTE: keep this file ASCII-only so Windows PowerShell 5.1 parses
+    it correctly regardless of file encoding.
 #>
 param(
-    [switch]$ProcessQueue,        # queue-এর সব অনুরোধ প্রসেস করো
-    [string]$RequestFile          # অথবা নির্দিষ্ট একটি অনুরোধ ফাইল
+    [switch]$ProcessQueue,        # process all requests in the queue
+    [string]$RequestFile          # or a single request file
 )
 
 $base   = $PSScriptRoot
@@ -22,12 +26,12 @@ $logF   = Join-Path $base 'worker.log'
 $queue  = Join-Path $base 'queue'
 function Log($m) { "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  [worker] $m" | Out-File -Append -FilePath $logF -Encoding utf8 }
 
-# সার্ভার ঠিকানা config.json থেকে
+# server address from config.json
 try {
     $cfg    = Get-Content (Join-Path $base 'config.json') -Raw | ConvertFrom-Json
     $server = $cfg.server.TrimEnd('/')
 } catch {
-    Log "config.json পড়া যায়নি: $($_.Exception.Message)"; return
+    Log "cannot read config.json: $($_.Exception.Message)"; return
 }
 $api = "$server/modules/appcenter/api.php"
 
@@ -40,7 +44,7 @@ function Invoke-Request($file) {
         $pc     = $env:COMPUTERNAME
 
         $info = Invoke-RestMethod -Uri "$api?id=$id&t=$token&a=$action&pc=$pc" -TimeoutSec 20
-        if (-not $info.ok) { throw "সার্ভার বলছে: $($info.error)" }
+        if (-not $info.ok) { throw "server says: $($info.error)" }
         $logId = $info.log_id
         Log "App=$($info.name) Type=$($info.type) Action=$action PC=$pc log=$logId"
 
@@ -56,8 +60,8 @@ function Invoke-Request($file) {
             if ($p.ExitCode -ne 0) { throw "winget exit code: $($p.ExitCode)" }
         }
         else {
-            if ($action -ne 'install') { throw "network অ্যাপে $action সম্ভব নয়।" }
-            if (-not (Test-Path $info.path)) { throw "ইনস্টলার পাওয়া যায়নি: $($info.path)" }
+            if ($action -ne 'install') { throw "action '$action' not allowed for a network app." }
+            if (-not (Test-Path $info.path)) { throw "installer not found: $($info.path)" }
             if ([string]::IsNullOrWhiteSpace($info.args)) {
                 $p = Start-Process -FilePath $info.path -Wait -PassThru
             } else {

@@ -1,49 +1,52 @@
 <#
     ===============================================================
-    App Center — Elevation Setup (admin একবার চালাবে)
+    App Center - Elevation Setup (admin runs once)
     ===============================================================
-    স্ট্যান্ডার্ড ইউজারের পিসিতে admin ছাড়াই install/update/uninstall
-    করাতে এটি একটি privileged "AppDeployRunner" Scheduled Task বানায়,
-    যা স্ট্যান্ডার্ড ইউজার শুধু trigger করতে পারবে কিন্তু চলবে elevated হয়ে।
+    Lets standard users install/update/uninstall without admin, by
+    creating a privileged "AppDeployRunner" scheduled task that a
+    standard user can only trigger but which runs elevated.
 
-    ব্যবহার (PowerShell, "Run as administrator"):
+    Usage (PowerShell, "Run as administrator"):
 
-      # পদ্ধতি ১ — SYSTEM হিসেবে (সুপারিশ; কোনো পাসওয়ার্ড লাগে না)
+      # Option 1 - as SYSTEM (recommended; no password needed)
       .\setup-elevation.ps1 -Server "http://192.168.0.10/erp" -RunAs system
 
-      # পদ্ধতি ২ — আপনার admin অ্যাকাউন্টে (Windows পাসওয়ার্ড নিরাপদে রাখে)
+      # Option 2 - as your admin account (Windows stores the cred safely)
       .\setup-elevation.ps1 -Server "http://192.168.0.10/erp" -RunAs admin
 
-    দুই পদ্ধতিই সাপোর্টেড — পিসিভেদে যেটা দরকার সেটা ব্যবহার করুন।
-    কোনো ক্ষেত্রেই প্লেইন পাসওয়ার্ড ডিস্কে থাকে না।
+    Both modes are supported - use whichever a given PC needs. No
+    plaintext password is stored on disk in either mode.
+
+    NOTE: keep this file ASCII-only so Windows PowerShell 5.1 parses
+    it correctly regardless of file encoding.
 #>
 param(
     [Parameter(Mandatory)][string]$Server,
     [ValidateSet('system','admin')][string]$RunAs = 'system'
 )
 
-# admin কিনা যাচাই
+# require admin
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
            ).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
-if (-not $isAdmin) { Write-Host "❌ এই স্ক্রিপ্ট 'Run as administrator' দিয়ে চালান।" -ForegroundColor Red; exit 1 }
+if (-not $isAdmin) { Write-Host "ERROR: run this script as administrator." -ForegroundColor Red; exit 1 }
 
 $dest  = "$env:ProgramData\AppDeploy"
 $queue = Join-Path $dest 'queue'
 New-Item -ItemType Directory -Force -Path $dest, $queue | Out-Null
 
-Write-Host "[1/4] স্ক্রিপ্ট কপি → $dest"
+Write-Host "[1/4] Copy scripts -> $dest"
 Copy-Item (Join-Path $PSScriptRoot 'appdeploy.ps1')        $dest -Force
 Copy-Item (Join-Path $PSScriptRoot 'appdeploy-worker.ps1') $dest -Force
 @{ server = $Server.TrimEnd('/') } | ConvertTo-Json | Set-Content (Join-Path $dest 'config.json') -Encoding utf8
 
-Write-Host "[2/4] appdeploy:// প্রোটোকল রেজিস্টার (সব ইউজারের জন্য, HKLM)"
+Write-Host "[2/4] Register appdeploy:// protocol (all users, HKLM)"
 $cmd = "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$dest\appdeploy.ps1`" `"%1`""
 New-Item -Path 'HKLM:\SOFTWARE\Classes\appdeploy\shell\open\command' -Force | Out-Null
 Set-ItemProperty 'HKLM:\SOFTWARE\Classes\appdeploy' -Name '(default)'    -Value 'URL:App Center Deploy Protocol'
 Set-ItemProperty 'HKLM:\SOFTWARE\Classes\appdeploy' -Name 'URL Protocol' -Value ''
 Set-ItemProperty 'HKLM:\SOFTWARE\Classes\appdeploy\shell\open\command' -Name '(default)' -Value $cmd
 
-Write-Host "[3/4] AppDeployRunner টাস্ক তৈরি ($RunAs হিসেবে)"
+Write-Host "[3/4] Create AppDeployRunner task (as $RunAs)"
 $taskAction = New-ScheduledTaskAction -Execute 'powershell.exe' `
     -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$dest\appdeploy-worker.ps1`" -ProcessQueue"
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours 1)
@@ -53,13 +56,13 @@ if ($RunAs -eq 'system') {
     Register-ScheduledTask -TaskName 'AppDeployRunner' -Action $taskAction -Principal $principal -Settings $settings -Force | Out-Null
 }
 else {
-    $cred = Get-Credential -Message 'যে admin অ্যাকাউন্টে টাস্ক চলবে তার ইউজার ও পাসওয়ার্ড দিন'
+    $cred = Get-Credential -Message 'Admin account the task will run as (user and password)'
     Register-ScheduledTask -TaskName 'AppDeployRunner' -Action $taskAction -Settings $settings `
         -User $cred.UserName -Password $cred.GetNetworkCredential().Password -RunLevel Highest -Force | Out-Null
 }
 
-Write-Host "[4/4] স্ট্যান্ডার্ড ইউজারদের টাস্ক 'run' করার অনুমতি দেওয়া"
-# টাস্কের DACL-এ Authenticated Users-কে Read+Execute (GRGX) দিই, যাতে ইউজার trigger করতে পারে
+Write-Host "[4/4] Allow standard users to run the task"
+# grant Authenticated Users read+execute (GRGX) on the task DACL so users can trigger it
 try {
     $svc = New-Object -ComObject 'Schedule.Service'; $svc.Connect()
     $folder = $svc.GetFolder('\')
@@ -69,17 +72,17 @@ try {
         $sddl += '(A;;GRGX;;;AU)'                       # Authenticated Users: read+execute
         $task.SetSecurityDescriptor($sddl, 0)
     }
-    Write-Host "     ✅ অনুমতি সেট হয়েছে"
+    Write-Host "     OK: permission set"
 } catch {
-    Write-Host "     ⚠️ DACL সেট করা যায়নি: $($_.Exception.Message)" -ForegroundColor Yellow
-    Write-Host "        দরকার হলে ম্যানুয়ালি Task Scheduler-এ Users-কে run অনুমতি দিন।"
+    Write-Host "     WARN: could not set DACL: $($_.Exception.Message)" -ForegroundColor Yellow
+    Write-Host "     If needed, grant Users 'run' on AppDeployRunner in Task Scheduler."
 }
 
 Write-Host ""
 Write-Host "===============================================" -ForegroundColor Green
-Write-Host "  ✅ Elevation setup সম্পন্ন ($RunAs মোড)" -ForegroundColor Green
+Write-Host "  OK: Elevation setup complete ($RunAs mode)" -ForegroundColor Green
 Write-Host "===============================================" -ForegroundColor Green
-Write-Host "  ফোল্ডার : $dest"
-Write-Host "  সার্ভার : $Server"
-Write-Host "  এখন স্ট্যান্ডার্ড ইউজারও ড্যাশবোর্ড থেকে admin ছাড়াই"
-Write-Host "  Install / Update / Uninstall করতে পারবে।"
+Write-Host "  Folder : $dest"
+Write-Host "  Server : $Server"
+Write-Host "  Standard users can now Install / Update / Uninstall"
+Write-Host "  from the dashboard without admin."
