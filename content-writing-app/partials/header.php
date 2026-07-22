@@ -28,6 +28,7 @@ $u = current_user();
                     <li class="nav-item"><a class="nav-link" href="<?= $base ?>index.php">ড্যাশবোর্ড</a></li>
                     <li class="nav-item"><a class="nav-link" href="<?= $base ?>categories.php">শেখা</a></li>
                     <li class="nav-item"><a class="nav-link" href="<?= $base ?>generate.php">খসড়া বানাও</a></li>
+                    <li class="nav-item"><a class="nav-link" href="<?= $base ?>ai_write.php">AI লিখে দাও</a></li>
                     <li class="nav-item"><a class="nav-link" href="<?= $base ?>writings.php">আমার লেখা</a></li>
                     <li class="nav-item"><a class="nav-link" href="<?= $base ?>settings.php">সেটিংস</a></li>
                     <li class="nav-item"><a class="nav-link text-warning" href="<?= $base ?>auth/logout.php">লগআউট (<?= e($u['name']) ?>)</a></li>

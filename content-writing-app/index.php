@@ -77,8 +77,9 @@ require __DIR__ . '/partials/header.php';
             <div class="d-grid gap-2">
                 <a href="categories.php" class="btn btn-brand">📚 শেখা (লেভেল ১)</a>
                 <a href="generate.php" class="btn btn-accent">⚡ খসড়া বানাও (লেভেল ২)</a>
+                <a href="ai_write.php" class="btn btn-accent">✨ AI লিখে দাও (লেভেল ৩)</a>
                 <a href="writings.php" class="btn btn-outline-secondary">📄 আমার লেখা</a>
-                <a href="settings.php" class="btn btn-outline-secondary">🤖 AI সেটিংস (লেভেল ৩)</a>
+                <a href="settings.php" class="btn btn-outline-secondary">🤖 AI সেটিংস</a>
             </div>
         </div>
     </div>
