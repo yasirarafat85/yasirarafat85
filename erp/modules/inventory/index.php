@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $db->delete('inventory_items', 'id = ?', [(int) input('id')]);
         flash('success', 'আইটেম ডিলিট হয়েছে।');
     }
-    redirect('index.php');
+    redirect('modules/inventory/index.php');
 }
 
 $items      = $db->fetchAll("SELECT * FROM inventory_items ORDER BY id DESC");

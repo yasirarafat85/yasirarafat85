@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $db->query("DELETE FROM install_logs");
         flash('success', 'সব লগ মুছে ফেলা হয়েছে।');
     }
-    redirect('logs.php');
+    redirect('modules/appcenter/logs.php');
 }
 
 // ফিল্টার

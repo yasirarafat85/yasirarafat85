@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($uploadError) {
             flash('error', $uploadError);
-            redirect('admin.php');
+            redirect('modules/appcenter/admin.php');
         }
 
         $data = [
@@ -83,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $db->delete('apps', 'id = ?', [(int) input('id')]);
         flash('success', 'অ্যাপ ডিলিট হয়েছে।');
     }
-    redirect('admin.php');
+    redirect('modules/appcenter/admin.php');
 }
 
 $apps = $db->fetchAll("SELECT * FROM apps ORDER BY sort_order, name");

@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         setting_set($db, 'appcenter_share_path', $path);
         flash('success', 'শেয়ার পাথ সংরক্ষিত হয়েছে।');
     }
-    redirect('settings.php');
+    redirect('modules/appcenter/settings.php');
 }
 
 $sharePath = appcenter_share_path($db);
