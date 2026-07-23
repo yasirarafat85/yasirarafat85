@@ -31,6 +31,7 @@ $AI_PROVIDERS = [
         'models' => [
             'openai/gpt-4o-mini',
             'openai/gpt-4o',
+            'anthropic/claude-sonnet-5',
             'anthropic/claude-3.5-sonnet',
             'google/gemini-flash-1.5',
             'meta-llama/llama-3.1-8b-instruct',
@@ -47,9 +48,12 @@ $AI_PROVIDERS = [
     'anthropic' => [
         'label'  => 'Anthropic (Claude)',
         'models' => [
+            'claude-opus-4-8',
+            'claude-sonnet-5',
+            'claude-haiku-4-5-20251001',
+            // পুরনো (অনেক অ্যাকাউন্টে এখনো চলে):
             'claude-3-5-sonnet-20241022',
             'claude-3-5-haiku-20241022',
-            'claude-3-opus-20240229',
         ],
     ],
 ];
