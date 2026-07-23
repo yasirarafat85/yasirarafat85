@@ -32,8 +32,17 @@
   // ---- সাধারণ মডাল হেল্পার ----
   function openModal(id){ document.getElementById(id)?.classList.add('open'); }
   function closeModal(id){ document.getElementById(id)?.classList.remove('open'); }
+  // ব্যাকড্রপে ক্লিক করলে বন্ধ — কিন্তু মডাল খোলার সময় ভুলে বন্ধ না হয়
   document.querySelectorAll('.modal-c').forEach(m =>
-    m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }));
+    m.addEventListener('mousedown', e => { if (e.target === m) m.classList.remove('open'); }));
+
+  // ---- Backspace দিয়ে ব্রাউজার "পিছনে" যাওয়া ঠেকাই (ইনপুটের বাইরে হলে) ----
+  document.addEventListener('keydown', function(e){
+    if (e.key !== 'Backspace') return;
+    const t = e.target;
+    const editable = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+    if (!editable) e.preventDefault();   // ফোকাস ইনপুটে না থাকলে Back বন্ধ
+  });
 </script>
 </body>
 </html>
