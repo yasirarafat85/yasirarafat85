@@ -222,8 +222,13 @@ require __DIR__ . '/../../includes/header.php';
           <summary style="cursor:pointer;color:var(--primary);font-weight:600;font-size:14px">আরও অপশন (ঐচ্ছিক)</summary>
           <div style="padding-top:14px">
             <div class="form-group"><label class="form-label">বিবরণ</label><input class="form-control" name="description" id="a_desc"></div>
-            <div class="form-group"><label class="form-label">Silent Install আর্গুমেন্ট <small style="color:var(--text-muted)">(.msi সাধারণত /qn)</small></label>
-              <input class="form-control" name="silent_args" id="a_args" placeholder="/silent /install"></div>
+            <div class="form-group"><label class="form-label">Silent Install আর্গুমেন্ট / winget flags</label>
+              <input class="form-control" name="silent_args" id="a_args" placeholder="/silent /install  বা  --architecture x86">
+              <p style="font-size:12px;color:var(--text-muted);margin:6px 0 0">
+                🗄️ network: ইনস্টলারের flag (.msi = <code>/qn</code>)।
+                📦 winget: বাড়তি flag — ৩২-বিট চাইলে <code>--architecture x86</code>,
+                নির্দিষ্ট ভার্সনে <code>--version 8.0.4</code>, মেশিন-স্কোপে <code>--scope machine</code>।
+              </p></div>
             <div class="grid grid-2">
               <div class="form-group"><label class="form-label">ভার্সন</label><input class="form-control" name="version" id="a_ver"></div>
               <div class="form-group"><label class="form-label">ক্রম (Sort)</label><input type="number" class="form-control" name="sort_order" id="a_sort" value="0"></div>

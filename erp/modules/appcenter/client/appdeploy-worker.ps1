@@ -84,10 +84,12 @@ function Invoke-Request($file) {
             Log "winget id: $($info.winget_id)"
 
             $common = "--silent --accept-package-agreements --accept-source-agreements"
+            # extra winget flags from Silent Args (e.g. --architecture x86, --version x)
+            $extra = if ([string]::IsNullOrWhiteSpace($info.args)) { "" } else { " " + $info.args.Trim() }
             switch ($action) {
-                'update'    { $wa = "upgrade   --id `"$($info.winget_id)`" $common" }
+                'update'    { $wa = "upgrade   --id `"$($info.winget_id)`" $common$extra" }
                 'uninstall' { $wa = "uninstall --id `"$($info.winget_id)`" --silent" }
-                default     { $wa = "install   --id `"$($info.winget_id)`" $common" }
+                default     { $wa = "install   --id `"$($info.winget_id)`" $common$extra" }
             }
             Log "RUN: winget $wa"
 

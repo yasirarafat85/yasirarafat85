@@ -39,10 +39,12 @@ try {
     Log "app=$($info.name) type=$($info.type) action=$action"
 
     if ($info.type -eq 'winget') {
+        # extra winget flags from Silent Args (e.g. --architecture x86, --version x, --scope machine)
+        $extra = if ([string]::IsNullOrWhiteSpace($info.args)) { '' } else { ' ' + $info.args.Trim() }
         switch ($action) {
-            'update'    { $wa = 'upgrade --id "{0}" --silent --accept-package-agreements --accept-source-agreements' -f $info.winget_id }
-            'uninstall' { $wa = 'uninstall --id "{0}" --silent' -f $info.winget_id }
-            default     { $wa = 'install --id "{0}" --silent --accept-package-agreements --accept-source-agreements' -f $info.winget_id }
+            'update'    { $wa = ('upgrade --id "{0}" --silent --accept-package-agreements --accept-source-agreements{1}' -f $info.winget_id, $extra) }
+            'uninstall' { $wa = ('uninstall --id "{0}" --silent' -f $info.winget_id) }
+            default     { $wa = ('install --id "{0}" --silent --accept-package-agreements --accept-source-agreements{1}' -f $info.winget_id, $extra) }
         }
         Log "winget $wa"
         $of = Join-Path $env:TEMP 'wg_out.txt'
