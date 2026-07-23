@@ -1,0 +1,19 @@
+Windows Registry Editor Version 5.00
+
+; ===============================================================
+;  App Center — appdeploy:// প্রোটোকল রেজিস্টার করে (Windows)
+;  এটি ক্লায়েন্ট পিসিতে একবার চালাতে হবে (ডাবল-ক্লিক → Yes)।
+;  শর্ত: appdeploy.ps1 ফাইলটি C:\AppDeploy\ ফোল্ডারে রাখতে হবে।
+;  অন্য জায়গায় রাখলে নিচের পাথ বদলে নিন।
+; ===============================================================
+
+[HKEY_CLASSES_ROOT\appdeploy]
+@="URL:App Center Deploy Protocol"
+"URL Protocol"=""
+
+[HKEY_CLASSES_ROOT\appdeploy\shell]
+
+[HKEY_CLASSES_ROOT\appdeploy\shell\open]
+
+[HKEY_CLASSES_ROOT\appdeploy\shell\open\command]
+@="powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"C:\\AppDeploy\\appdeploy.ps1\" \"%1\""
