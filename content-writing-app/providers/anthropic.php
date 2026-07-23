@@ -3,14 +3,14 @@
 // ফরম্যাট আলাদা: x-api-key হেডার, system আলাদা ফিল্ড, content অ্যারে
 // সাধারণ ইন্টারফেস: provider_anthropic($apiKey, $model, $system, $userPrompt): array
 
-function provider_anthropic(string $apiKey, string $model, string $system, string $userPrompt, float $temperature = 0.7): array
+function provider_anthropic(string $apiKey, string $model, string $system, string $userPrompt, float $temperature = 0.7, int $maxTokens = 2000): array
 {
     // দ্রষ্টব্য: নতুন Claude মডেলে (Opus 4.8, Sonnet 5, Haiku 4.5) `temperature`
     // ডিপ্রিকেটেড — পাঠালে 400 এরর দেয়। তাই এখানে পাঠানো হয় না।
     // বৈচিত্র্য আসে system prompt-এর র‍্যান্ডম হুক/টোন থেকে।
     $body = [
         'model' => $model,
-        'max_tokens' => 1024,
+        'max_tokens' => $maxTokens,
         'system' => $system,
         'messages' => [
             ['role' => 'user', 'content' => $userPrompt],
