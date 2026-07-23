@@ -10,8 +10,15 @@ $db  = Database::getInstance();
 appcenter_ensure_schema($db);
 
 // guest mode চালু থাকলে লগইন ছাড়াই ডাউনলোড, নইলে permission লাগবে
-if (!Auth::check() && setting_get($db, 'appcenter_guest', '0') !== '1') {
-    Auth::requirePermission('appcenter.view');
+if (!Auth::check()) {
+    if (setting_get($db, 'appcenter_guest', '0') !== '1') {
+        Auth::requirePermission('appcenter.view');
+    }
+    // guest-এর জন্য download বন্ধ থাকলে আটকাই
+    if (setting_get($db, 'appcenter_guest_download', '1') !== '1') {
+        http_response_code(403);
+        exit('Guest mode-এ ডাউনলোড বন্ধ আছে।');
+    }
 }
 
 $id  = (int) input('id');

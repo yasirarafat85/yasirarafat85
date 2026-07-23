@@ -17,7 +17,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('error', 'শেয়ার পাথ খালি রাখা যাবে না।');
     } else {
         setting_set($db, 'appcenter_share_path', $path);
-        setting_set($db, 'appcenter_guest', input('guest') ? '1' : '0');
+        setting_set($db, 'appcenter_guest',           input('guest')     ? '1' : '0');
+        setting_set($db, 'appcenter_guest_install',   input('g_install') ? '1' : '0');
+        setting_set($db, 'appcenter_guest_update',    input('g_update')  ? '1' : '0');
+        setting_set($db, 'appcenter_guest_uninstall', input('g_uninstall') ? '1' : '0');
+        setting_set($db, 'appcenter_guest_download',  input('g_download') ? '1' : '0');
         flash('success', 'সেটিংস সংরক্ষিত হয়েছে।');
     }
     redirect('modules/appcenter/settings.php');
@@ -25,6 +29,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $sharePath = appcenter_share_path($db);
 $guestOn   = setting_get($db, 'appcenter_guest', '0') === '1';
+$gAllow = [
+    'install'   => setting_get($db, 'appcenter_guest_install',   '1') === '1',
+    'update'    => setting_get($db, 'appcenter_guest_update',    '0') === '1',
+    'uninstall' => setting_get($db, 'appcenter_guest_uninstall', '0') === '1',
+    'download'  => setting_get($db, 'appcenter_guest_download',  '1') === '1',
+];
 
 // পাথটি লেখা যায় কিনা পরীক্ষা (আপলোড কাজ করবে কিনা বোঝাতে)
 $writable = is_dir($sharePath) && is_writable($sharePath);
@@ -71,10 +81,22 @@ require __DIR__ . '/../../includes/header.php';
         <span>
           <b>Guest mode চালু করুন</b><br>
           <small style="color:var(--text-muted)">চালু থাকলে ইউজাররা <b>লগইন ছাড়াই</b> App Center পেজ দেখে
-          Install/Download করতে পারবে — কিন্তু অ্যাপ manage/এডিট করতে পারবে না।
+          কাজ করতে পারবে — কিন্তু অ্যাপ manage/এডিট করতে পারবে না।
           বন্ধ থাকলে লগইন লাগবে।</small>
         </span>
       </label>
+
+      <!-- guest কী কী করতে পারবে -->
+      <div style="margin-top:14px;padding:14px 16px;border:1px solid var(--border);border-radius:12px;background:var(--bg-secondary)">
+        <div style="font-weight:600;font-size:14px;margin-bottom:10px">Guest কী কী করতে পারবে?</div>
+        <div class="checkbox-grid">
+          <label class="check"><input type="checkbox" name="g_install"   value="1" <?= $gAllow['install']   ? 'checked' : '' ?>> <i class="bi bi-lightning-charge" style="color:#00897B"></i> Install</label>
+          <label class="check"><input type="checkbox" name="g_update"    value="1" <?= $gAllow['update']    ? 'checked' : '' ?>> <i class="bi bi-arrow-repeat" style="color:#F57C00"></i> Update</label>
+          <label class="check"><input type="checkbox" name="g_uninstall" value="1" <?= $gAllow['uninstall'] ? 'checked' : '' ?>> <i class="bi bi-trash3" style="color:#E53935"></i> Uninstall</label>
+          <label class="check"><input type="checkbox" name="g_download"  value="1" <?= $gAllow['download']  ? 'checked' : '' ?>> <i class="bi bi-download" style="color:#2196F3"></i> Download</label>
+        </div>
+        <p style="font-size:12px;color:var(--text-muted);margin:10px 0 0">টিক দেওয়া কাজগুলোই guest পেজে বাটন হিসেবে দেখাবে। (লগইন করা অ্যাডমিন সবসময় সব দেখবে।)</p>
+      </div>
     </div>
 
     <button class="btn btn-success" style="margin-top:8px"><i class="bi bi-check-lg"></i> সংরক্ষণ করুন</button>

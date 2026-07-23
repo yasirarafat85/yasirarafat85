@@ -94,14 +94,22 @@ if (!$guest) {
       <?php if (Auth::can('appcenter.manage')): ?><br><a href="<?= url('modules/appcenter/admin.php') ?>" style="color:var(--primary);font-weight:600">অ্যাপ যোগ করুন →</a><?php endif; ?>
     </p>
   </div>
-<?php else: ?>
+<?php
+// guest হলে Settings অনুযায়ী কোন অ্যাকশন দেখাবে; লগইন করা থাকলে সব দেখাবে
+$allow = [
+    'install'   => !$guest || setting_get($db, 'appcenter_guest_install',   '1') === '1',
+    'update'    => !$guest || setting_get($db, 'appcenter_guest_update',    '0') === '1',
+    'uninstall' => !$guest || setting_get($db, 'appcenter_guest_uninstall', '0') === '1',
+    'download'  => !$guest || setting_get($db, 'appcenter_guest_download',  '1') === '1',
+];
+?>
   <div class="app-grid">
     <?php foreach ($apps as $app): $token = app_token((int)$app['id']); $isWinget = ($app['install_type'] === 'winget'); ?>
       <div class="app-card">
         <div class="app-top">
           <div class="app-icon <?= e($app['color']) ?>"><i class="bi <?= e($app['icon']) ?>"></i></div>
           <div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end">
-            <?php if ($isWinget): ?><span class="badge-c badge-blue" title="Windows Package Manager"><i class="bi bi-box"></i> winget</span><?php endif; ?>
+            <?php if ($isWinget): ?><span class="badge-c badge-blue" title="winget (Windows Package Manager)"><i class="bi bi-box"></i></span><?php endif; ?>
             <?php if ($app['version']): ?><span class="badge-c badge-gray">v<?= e($app['version']) ?></span><?php endif; ?>
           </div>
         </div>
@@ -109,30 +117,38 @@ if (!$guest) {
         <div class="app-cat"><i class="bi bi-tag"></i> <?= e($app['category']) ?></div>
         <div class="app-desc"><?= e($app['description'] ?: 'কোনো বিবরণ নেই') ?></div>
         <div class="app-actions">
+          <?php if ($allow['install']): ?>
           <a class="btn btn-success btn-sm app-install"
              href="appdeploy://<?= (int)$app['id'] ?>?t=<?= $token ?>&a=install"
              data-name="<?= e($app['name']) ?>" data-action="Install">
             <i class="bi bi-lightning-charge"></i> Install
           </a>
+          <?php endif; ?>
           <?php if ($isWinget): ?>
+            <?php if ($allow['update']): ?>
             <a class="btn btn-warning btn-sm app-install"
                href="appdeploy://<?= (int)$app['id'] ?>?t=<?= $token ?>&a=update"
                data-name="<?= e($app['name']) ?>" data-action="Update">
               <i class="bi bi-arrow-repeat"></i> Update
             </a>
+            <?php endif; ?>
+            <?php if ($allow['uninstall']): ?>
             <a class="btn btn-danger btn-sm app-install"
                href="appdeploy://<?= (int)$app['id'] ?>?t=<?= $token ?>&a=uninstall"
                data-name="<?= e($app['name']) ?>" data-action="Uninstall">
               <i class="bi bi-trash3"></i> Uninstall
             </a>
+            <?php endif; ?>
             <button type="button" class="btn btn-ghost btn-sm" title="winget ID কপি"
                     onclick="copyPath(this, '<?= e($app['winget_id']) ?>')">
               <i class="bi bi-clipboard"></i> ID
             </button>
           <?php else: ?>
+            <?php if ($allow['download']): ?>
             <a class="btn btn-primary btn-sm" href="<?= url('modules/appcenter/download.php?id=' . (int)$app['id']) ?>">
               <i class="bi bi-download"></i> Download
             </a>
+            <?php endif; ?>
             <button type="button" class="btn btn-ghost btn-sm" title="নেটওয়ার্ক পাথ কপি"
                     onclick="copyPath(this, '<?= e(str_replace('\\', '\\\\', resolve_app_path($app['network_path'] ?? ''))) ?>')">
               <i class="bi bi-clipboard"></i>
