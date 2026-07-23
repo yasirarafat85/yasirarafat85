@@ -201,10 +201,12 @@ require __DIR__ . '/../../includes/header.php';
           </div>
           <div class="form-group">
             <label class="form-label">Winget ID *</label>
-            <div style="display:flex;gap:8px">
-              <input class="form-control" name="winget_id" id="a_winget" placeholder="Google.Chrome">
-              <button type="button" class="btn btn-ghost" style="white-space:nowrap" onclick="wingetSearch()"><i class="bi bi-search"></i> সার্ভারে খুঁজুন</button>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <input class="form-control" name="winget_id" id="a_winget" placeholder="Google.Chrome" style="flex:1;min-width:180px">
+              <button type="button" class="btn btn-ghost btn-sm" style="white-space:nowrap" onclick="wingetSearch()"><i class="bi bi-search"></i> সার্ভারে</button>
+              <button type="button" class="btn btn-ghost btn-sm" style="white-space:nowrap" onclick="openWingetRun()"><i class="bi bi-box-arrow-up-right"></i> winget.run</button>
             </div>
+            <p style="font-size:12px;color:var(--text-muted);margin:6px 0 0">💡 winget.run-এ খুঁজে <b>ID কপি</b> করে এখানে পেস্ট করুন।</p>
             <div id="wgResults" style="margin-top:8px"></div>
           </div>
         </div>
@@ -277,6 +279,12 @@ function onWgPick(){
     document.getElementById('a_winget').value = WG[v];
     if (!document.getElementById('a_name').value) document.getElementById('a_name').value = v;
   }
+}
+// winget.run সাইটে নতুন ট্যাবে খুঁজুন (ID কপি করার জন্য)
+function openWingetRun(){
+  const q = document.getElementById('a_wgpick').value || document.getElementById('a_name').value || document.getElementById('a_winget').value;
+  const url = q ? ('https://winget.run/search?query=' + encodeURIComponent(q)) : 'https://winget.run/';
+  window.open(url, '_blank', 'noopener');
 }
 // সার্ভারে winget search
 function wingetSearch(){
