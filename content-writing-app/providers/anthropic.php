@@ -3,11 +3,12 @@
 // ফরম্যাট আলাদা: x-api-key হেডার, system আলাদা ফিল্ড, content অ্যারে
 // সাধারণ ইন্টারফেস: provider_anthropic($apiKey, $model, $system, $userPrompt): array
 
-function provider_anthropic(string $apiKey, string $model, string $system, string $userPrompt): array
+function provider_anthropic(string $apiKey, string $model, string $system, string $userPrompt, float $temperature = 0.7): array
 {
     $body = [
         'model' => $model,
         'max_tokens' => 1024,
+        'temperature' => $temperature,
         'system' => $system,
         'messages' => [
             ['role' => 'user', 'content' => $userPrompt],

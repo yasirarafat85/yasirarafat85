@@ -65,7 +65,7 @@ function ai_available(int $userId): bool
 
 // ---- মূল ফাংশন: যেকোনো পেজ এটাই ডাকবে ----
 // রিটার্ন: ['ok'=>bool, 'text'=>string, 'error'=>string]
-function ai_chat(int $userId, string $system, string $userPrompt, ?string $modelOverride = null): array
+function ai_chat(int $userId, string $system, string $userPrompt, ?string $modelOverride = null, float $temperature = 0.7): array
 {
     $s = get_ai_settings($userId);
     if ($s['api_key'] === '') {
@@ -87,5 +87,5 @@ function ai_chat(int $userId, string $system, string $userPrompt, ?string $model
 
     require_once __DIR__ . '/../providers/' . $provider . '.php';
     $fn = $map[$provider];
-    return $fn($s['api_key'], $model, $system, $userPrompt);
+    return $fn($s['api_key'], $model, $system, $userPrompt, $temperature);
 }

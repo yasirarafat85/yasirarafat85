@@ -2,7 +2,7 @@
 // providers/openrouter.php — OpenRouter API (OpenAI-সদৃশ ফরম্যাট)
 // সাধারণ ইন্টারফেস: provider_openrouter($apiKey, $model, $system, $userPrompt): array
 
-function provider_openrouter(string $apiKey, string $model, string $system, string $userPrompt): array
+function provider_openrouter(string $apiKey, string $model, string $system, string $userPrompt, float $temperature = 0.7): array
 {
     $body = [
         'model' => $model,
@@ -10,7 +10,7 @@ function provider_openrouter(string $apiKey, string $model, string $system, stri
             ['role' => 'system', 'content' => $system],
             ['role' => 'user',   'content' => $userPrompt],
         ],
-        'temperature' => 0.7,
+        'temperature' => $temperature,
     ];
     $headers = [
         'Content-Type: application/json',

@@ -3,7 +3,7 @@
 // সাধারণ ইন্টারফেস: provider_openai($apiKey, $model, $system, $userPrompt): array
 // রিটার্ন: ['ok'=>bool, 'text'=>string, 'error'=>string]
 
-function provider_openai(string $apiKey, string $model, string $system, string $userPrompt): array
+function provider_openai(string $apiKey, string $model, string $system, string $userPrompt, float $temperature = 0.7): array
 {
     $body = [
         'model' => $model,
@@ -11,7 +11,7 @@ function provider_openai(string $apiKey, string $model, string $system, string $
             ['role' => 'system', 'content' => $system],
             ['role' => 'user',   'content' => $userPrompt],
         ],
-        'temperature' => 0.7,
+        'temperature' => $temperature,
     ];
     $headers = [
         'Content-Type: application/json',
