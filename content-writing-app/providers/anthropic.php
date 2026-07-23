@@ -5,10 +5,12 @@
 
 function provider_anthropic(string $apiKey, string $model, string $system, string $userPrompt, float $temperature = 0.7): array
 {
+    // দ্রষ্টব্য: নতুন Claude মডেলে (Opus 4.8, Sonnet 5, Haiku 4.5) `temperature`
+    // ডিপ্রিকেটেড — পাঠালে 400 এরর দেয়। তাই এখানে পাঠানো হয় না।
+    // বৈচিত্র্য আসে system prompt-এর র‍্যান্ডম হুক/টোন থেকে।
     $body = [
         'model' => $model,
         'max_tokens' => 1024,
-        'temperature' => $temperature,
         'system' => $system,
         'messages' => [
             ['role' => 'user', 'content' => $userPrompt],

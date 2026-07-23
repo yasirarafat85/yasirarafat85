@@ -48,12 +48,9 @@ $AI_PROVIDERS = [
     'anthropic' => [
         'label'  => 'Anthropic (Claude)',
         'models' => [
-            'claude-opus-4-8',
-            'claude-sonnet-5',
-            'claude-haiku-4-5-20251001',
-            // পুরনো (অনেক অ্যাকাউন্টে এখনো চলে):
-            'claude-3-5-sonnet-20241022',
-            'claude-3-5-haiku-20241022',
+            'claude-haiku-4-5-20251001',   // দ্রুত ও সাশ্রয়ী
+            'claude-sonnet-5',             // ভারসাম্যপূর্ণ
+            'claude-opus-4-8',             // সবচেয়ে শক্তিশালী
         ],
     ],
 ];
