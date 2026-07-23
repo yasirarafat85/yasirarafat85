@@ -203,7 +203,7 @@ require __DIR__ . '/../../includes/header.php';
             <label class="form-label">Winget ID *</label>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <input class="form-control" name="winget_id" id="a_winget" placeholder="Google.Chrome" style="flex:1;min-width:170px">
-              <button type="button" class="btn btn-primary btn-sm" style="white-space:nowrap" onclick="wingetRunSearch()"><i class="bi bi-search"></i> অনলাইন খুঁজুন</button>
+              <button type="button" class="btn btn-primary btn-sm" style="white-space:nowrap" onclick="doWingetSearch()"><i class="bi bi-search"></i> খুঁজুন</button>
               <button type="button" class="btn btn-ghost btn-sm" title="winget.run নতুন ট্যাবে" onclick="openWingetRun()"><i class="bi bi-box-arrow-up-right"></i></button>
             </div>
             <p style="font-size:12px;color:var(--text-muted);margin:6px 0 0">💡 নাম টাইপ করে <b>অনলাইন খুঁজুন</b> — winget.run থেকে ফলাফল দেখে ক্লিক করুন।</p>
@@ -291,41 +291,36 @@ function openWingetRun(){
   const url = q ? ('https://winget.run/search?query=' + encodeURIComponent(q)) : 'https://winget.run/';
   window.open(url, '_blank', 'noopener');
 }
-// winget.run API-তে অনলাইন সার্চ (মডালের ভেতরেই ফলাফল)
-function wingetRunSearch(){
+// ফলাফল দেখানো
+function renderWg(box, results, sourceNote){
+  box.innerHTML = (sourceNote ? '<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">'+sourceNote+'</div>' : '') +
+    results.slice(0,10).map(r =>
+      '<div class="wg-res"><span><b>'+(r.name||'')+'</b> <code>'+(r.id||'')+'</code>'+
+      (r.publisher?' <small style="color:var(--text-muted)">'+r.publisher+'</small>':'')+' '+(r.version||'')+'</span>'+
+      '<button type="button" class="btn btn-ghost btn-sm" onclick="pickWg(\''+(r.id||'').replace(/\x27/g,"")+'\',\''+(r.name||'').replace(/\x27/g,"")+'\')">বাছুন</button></div>'
+    ).join('');
+}
+// সার্চ — আগে সার্ভারের নিজের winget (আগে কাজ করত), না পেলে winget.run API
+function doWingetSearch(){
   const q = document.getElementById('a_wgpick').value || document.getElementById('a_name').value || document.getElementById('a_winget').value;
   const box = document.getElementById('wgResults');
   if (!q) { box.innerHTML = '<span style="color:var(--text-muted);font-size:13px">আগে কিছু টাইপ করুন।</span>'; return; }
-  box.innerHTML = '<span style="color:var(--text-muted);font-size:13px"><i class="bi bi-hourglass-split"></i> winget.run-এ খুঁজছি…</span>';
-  fetch('<?= url('modules/appcenter/winget-run.php') ?>?q=' + encodeURIComponent(q))
-    .then(r => r.json())
-    .then(d => {
-      if (!d.ok) { box.innerHTML = '<span style="color:#DC2626;font-size:13px">'+d.error+'</span>'; return; }
-      box.innerHTML = d.results.map(r =>
-        '<div class="wg-res"><span><b>'+r.name+'</b> <code>'+r.id+'</code>'+
-        (r.publisher?' <small style="color:var(--text-muted)">'+r.publisher+'</small>':'')+' '+(r.version||'')+'</span>'+
-        '<button type="button" class="btn btn-ghost btn-sm" onclick="pickWg(\''+r.id.replace(/'/g,"")+'\',\''+r.name.replace(/'/g,"")+'\')">বাছুন</button></div>'
-      ).join('');
-    })
-    .catch(() => box.innerHTML = '<span style="color:#DC2626;font-size:13px">সার্চ ব্যর্থ — ইন্টারনেট/সংযোগ দেখুন।</span>');
-}
-// সার্ভারে winget search
-function wingetSearch(){
-  const q = document.getElementById('a_wgpick').value || document.getElementById('a_name').value;
-  const box = document.getElementById('wgResults');
-  if (!q) { box.innerHTML = '<span style="color:var(--text-muted);font-size:13px">আগে কিছু টাইপ করুন।</span>'; return; }
-  box.innerHTML = '<span style="color:var(--text-muted);font-size:13px">খুঁজছি…</span>';
+  box.innerHTML = '<span style="color:var(--text-muted);font-size:13px"><i class="bi bi-hourglass-split"></i> খুঁজছি…</span>';
+
+  // ধাপ ১: সার্ভারের নিজের winget
   fetch('<?= url('modules/appcenter/winget-search.php') ?>?q=' + encodeURIComponent(q))
     .then(r => r.json())
     .then(d => {
-      if (!d.ok) { box.innerHTML = '<span style="color:#DC2626;font-size:13px">'+d.error+'</span>'; return; }
-      if (!d.results.length) { box.innerHTML = '<span style="color:var(--text-muted);font-size:13px">কিছু পাওয়া যায়নি।</span>'; return; }
-      box.innerHTML = d.results.slice(0,8).map(r =>
-        '<div class="wg-res"><span><b>'+r.name+'</b> <code>'+r.id+'</code> '+(r.version||'')+'</span>'+
-        '<button type="button" class="btn btn-ghost btn-sm" onclick="pickWg(\''+r.id.replace(/'/g,"")+'\',\''+r.name.replace(/'/g,"")+'\')">বাছুন</button></div>'
-      ).join('');
+      if (d.ok && d.results && d.results.length) { renderWg(box, d.results, 'সার্ভারের winget থেকে'); return; }
+      // ধাপ ২: না পেলে winget.run API
+      return fetch('<?= url('modules/appcenter/winget-run.php') ?>?q=' + encodeURIComponent(q))
+        .then(r => r.json())
+        .then(d2 => {
+          if (d2.ok && d2.results && d2.results.length) { renderWg(box, d2.results, 'winget.run থেকে'); }
+          else { box.innerHTML = '<span style="color:#DC2626;font-size:13px">'+(d2.error || 'কিছু পাওয়া যায়নি')+'<br>তালিকা থেকে বাছুন, ↗ winget.run খুলুন, অথবা ID সরাসরি টাইপ করুন।</span>'; }
+        });
     })
-    .catch(() => box.innerHTML = '<span style="color:#DC2626;font-size:13px">সার্চ ব্যর্থ।</span>');
+    .catch(() => box.innerHTML = '<span style="color:#DC2626;font-size:13px">সার্চ ব্যর্থ — তালিকা বা ↗ winget.run ব্যবহার করুন।</span>');
 }
 function pickWg(id, name){
   document.getElementById('a_winget').value = id;
