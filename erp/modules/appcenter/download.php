@@ -9,16 +9,10 @@ require_once __DIR__ . '/_schema.php';
 $db  = Database::getInstance();
 appcenter_ensure_schema($db);
 
-// guest mode চালু থাকলে লগইন ছাড়াই ডাউনলোড, নইলে permission লাগবে
-if (!Auth::check()) {
-    if (setting_get($db, 'appcenter_guest', '0') !== '1') {
-        Auth::requirePermission('appcenter.view');
-    }
-    // guest-এর জন্য download বন্ধ থাকলে আটকাই
-    if (setting_get($db, 'appcenter_guest_download', '1') !== '1') {
-        http_response_code(403);
-        exit('Guest mode-এ ডাউনলোড বন্ধ আছে।');
-    }
+// guest mode বন্ধ থাকলে লগইন লাগবে
+$isGuest = !Auth::check();
+if ($isGuest && setting_get($db, 'appcenter_guest', '0') !== '1') {
+    Auth::requirePermission('appcenter.view');
 }
 
 $id  = (int) input('id');
@@ -27,6 +21,15 @@ $app = $db->fetch("SELECT * FROM apps WHERE id = ? AND is_active = 1", [$id]);
 if (!$app) {
     http_response_code(404);
     exit('অ্যাপ পাওয়া যায়নি।');
+}
+
+// guest হলে এই অ্যাপে download অনুমোদিত কিনা (per-app বা গ্লোবাল)
+if ($isGuest) {
+    $allow = appcenter_allowed_actions($db, $app, true);
+    if (!$allow['download']) {
+        http_response_code(403);
+        exit('এই অ্যাপে guest ডাউনলোড অনুমোদিত নয়।');
+    }
 }
 
 // winget অ্যাপ ডাউনলোড হয় না (কোনো ফাইল নেই — winget নিজে নামায়)

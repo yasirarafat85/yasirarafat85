@@ -55,19 +55,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirect('modules/appcenter/admin.php');
         }
 
+        // per-app guest permission
+        if (input('guest_mode') === 'custom') {
+            $acts = [];
+            foreach (['install', 'update', 'uninstall', 'download'] as $ga) {
+                if (input('ga_' . $ga)) $acts[] = $ga;
+            }
+            $guestActions = $acts ? implode(',', $acts) : 'none';
+        } else {
+            $guestActions = null;   // গ্লোবাল সেটিং অনুসরণ
+        }
+
         $data = [
-            'name'         => $name,
-            'description'  => trim(input('description')),
-            'category'     => trim(input('category')) ?: 'General',
-            'icon'         => trim(input('icon')) ?: 'bi-app',
-            'color'        => trim(input('color')) ?: 'blue',
-            'install_type' => $type,
-            'network_path' => $networkPath,
-            'winget_id'    => trim(input('winget_id')),
-            'silent_args'  => $silentArgs,
-            'version'      => trim(input('version')),
-            'is_active'    => (int) input('is_active', 1),
-            'sort_order'   => (int) input('sort_order', 0),
+            'name'          => $name,
+            'description'   => trim(input('description')),
+            'category'      => trim(input('category')) ?: 'General',
+            'icon'          => trim(input('icon')) ?: 'bi-app',
+            'color'         => trim(input('color')) ?: 'blue',
+            'install_type'  => $type,
+            'network_path'  => $networkPath,
+            'winget_id'     => trim(input('winget_id')),
+            'silent_args'   => $silentArgs,
+            'version'       => trim(input('version')),
+            'is_active'     => (int) input('is_active', 1),
+            'sort_order'    => (int) input('sort_order', 0),
+            'guest_actions' => $guestActions,
         ];
         $missing = $type === 'winget' ? $data['winget_id'] === '' : $data['network_path'] === '';
         if ($data['name'] === '' || $missing) {
@@ -240,6 +252,22 @@ require __DIR__ . '/../../includes/header.php';
             </div>
             <div class="form-group"><label class="form-label">স্ট্যাটাস</label>
               <select class="form-control" name="is_active" id="a_active"><option value="1">চালু</option><option value="0">বন্ধ</option></select></div>
+
+            <!-- per-app guest permission -->
+            <div class="form-group" style="padding-top:12px;border-top:1px solid var(--border)">
+              <label class="form-label">Guest permission (এই অ্যাপে) <small style="color:var(--text-muted)">— guest link-এ</small></label>
+              <select class="form-control" name="guest_mode" id="a_gmode" onchange="toggleGuestPerm()">
+                <option value="global">গ্লোবাল সেটিং অনুসরণ করো</option>
+                <option value="custom">এই অ্যাপে আলাদা সেট করো</option>
+              </select>
+              <div id="a_gperm" class="checkbox-grid" style="display:none;margin-top:10px">
+                <label class="check"><input type="checkbox" name="ga_install"   id="ga_install"> Install</label>
+                <label class="check"><input type="checkbox" name="ga_update"    id="ga_update"> Update</label>
+                <label class="check"><input type="checkbox" name="ga_uninstall" id="ga_uninstall"> Uninstall</label>
+                <label class="check"><input type="checkbox" name="ga_download"  id="ga_download"> Download</label>
+              </div>
+              <p style="font-size:12px;color:var(--text-muted);margin:8px 0 0">"আলাদা সেট" করলে guest এই অ্যাপে শুধু টিক-করা কাজগুলোই পারবে (কিছু টিক না দিলে কিছুই পারবে না)। অ্যাডমিন সবসময় সব পারে।</p>
+            </div>
           </div>
         </details>
       </div>
@@ -327,6 +355,11 @@ function pickWg(id, name){
   if (!document.getElementById('a_name').value) document.getElementById('a_name').value = name;
   document.getElementById('wgResults').innerHTML = '<span style="color:#059669;font-size:13px">বাছাই: '+id+'</span>';
 }
+// per-app guest permission checkbox দেখানো/লুকানো
+function toggleGuestPerm(){
+  document.getElementById('a_gperm').style.display =
+    document.getElementById('a_gmode').value === 'custom' ? '' : 'none';
+}
 
 function openAppModal(){
   document.getElementById('appModalTitle').textContent='নতুন অ্যাপ';
@@ -338,6 +371,9 @@ function openAppModal(){
   document.getElementById('a_active').value='1'; document.getElementById('wgResults').innerHTML='';
   document.getElementById('type_net').checked=true;
   document.getElementById('grp_file').style.display=''; document.getElementById('grp_curpath').style.display='none';
+  document.getElementById('a_gmode').value='global';
+  ['ga_install','ga_update','ga_uninstall','ga_download'].forEach(i=>document.getElementById(i).checked=false);
+  toggleGuestPerm();
   toggleType(); openModal('appModal');
 }
 function editApp(a){
@@ -361,6 +397,16 @@ function editApp(a){
     document.getElementById('a_path').value=a.network_path||'';
     document.getElementById('grp_curpath').style.display='';  // এডিটে বর্তমান ফাইল দেখাই
   }
+  // per-app guest permission
+  if (a.guest_actions) {
+    document.getElementById('a_gmode').value='custom';
+    const set = a.guest_actions === 'none' ? [] : a.guest_actions.split(',');
+    ['install','update','uninstall','download'].forEach(x =>
+      document.getElementById('ga_'+x).checked = set.includes(x));
+  } else {
+    document.getElementById('a_gmode').value='global';
+  }
+  toggleGuestPerm();
   toggleType();
 }
 </script>

@@ -94,17 +94,12 @@ if (!$guest) {
       <?php if (Auth::can('appcenter.manage')): ?><br><a href="<?= url('modules/appcenter/admin.php') ?>" style="color:var(--primary);font-weight:600">অ্যাপ যোগ করুন →</a><?php endif; ?>
     </p>
   </div>
-<?php
-// guest হলে Settings অনুযায়ী কোন অ্যাকশন দেখাবে; লগইন করা থাকলে সব দেখাবে
-$allow = [
-    'install'   => !$guest || setting_get($db, 'appcenter_guest_install',   '1') === '1',
-    'update'    => !$guest || setting_get($db, 'appcenter_guest_update',    '0') === '1',
-    'uninstall' => !$guest || setting_get($db, 'appcenter_guest_uninstall', '0') === '1',
-    'download'  => !$guest || setting_get($db, 'appcenter_guest_download',  '1') === '1',
-];
-?>
   <div class="app-grid">
-    <?php foreach ($apps as $app): $token = app_token((int)$app['id']); $isWinget = ($app['install_type'] === 'winget'); ?>
+    <?php foreach ($apps as $app):
+      $token = app_token((int)$app['id']);
+      $isWinget = ($app['install_type'] === 'winget');
+      $allow = appcenter_allowed_actions($db, $app, $guest);   // per-app guest permission
+    ?>
       <div class="app-card">
         <div class="app-top">
           <div class="app-icon <?= e($app['color']) ?>"><i class="bi <?= e($app['icon']) ?>"></i></div>

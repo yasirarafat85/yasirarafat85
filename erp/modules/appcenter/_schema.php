@@ -27,6 +27,9 @@ function appcenter_ensure_schema(Database $db): void
     // পুরনো টেবিলে নতুন কলাম যোগ (আগে বানানো ডাটাবেসের জন্য)
     ensure_column($db, 'apps', 'install_type', "VARCHAR(20) NOT NULL DEFAULT 'network'");
     ensure_column($db, 'apps', 'winget_id',    "VARCHAR(150) DEFAULT NULL");
+    // per-app guest permission: NULL = গ্লোবাল সেটিং, 'none' = কিছুই না,
+    // নইলে comma-list (যেমন 'install,download')
+    ensure_column($db, 'apps', 'guest_actions', "VARCHAR(120) DEFAULT NULL");
 
     // ---- install_logs (কোন পিসি থেকে কোন অ্যাপ ইনস্টল হলো) ----
     $db->query("CREATE TABLE IF NOT EXISTS install_logs (
@@ -75,4 +78,34 @@ function appcenter_share_path(Database $db): string
 {
     $p = setting_get($db, 'appcenter_share_path', NETWORK_SHARE_BASE);
     return rtrim($p, '\\/');
+}
+
+/**
+ * একটি অ্যাপে guest কী কী করতে পারবে তা হিসাব করে।
+ * - লগইন করা থাকলে সব true (admin সবসময় সব দেখে)।
+ * - guest হলে: অ্যাপের নিজস্ব override থাকলে সেটা, নইলে গ্লোবাল সেটিং।
+ * ফেরত: ['install'=>bool,'update'=>bool,'uninstall'=>bool,'download'=>bool]
+ */
+function appcenter_allowed_actions(Database $db, array $app, bool $guest): array
+{
+    if (!$guest) {
+        return ['install' => true, 'update' => true, 'uninstall' => true, 'download' => true];
+    }
+    $ga = $app['guest_actions'] ?? null;
+    if ($ga !== null && $ga !== '') {          // per-app override
+        $set = $ga === 'none' ? [] : array_map('trim', explode(',', $ga));
+        return [
+            'install'   => in_array('install',   $set, true),
+            'update'    => in_array('update',    $set, true),
+            'uninstall' => in_array('uninstall', $set, true),
+            'download'  => in_array('download',  $set, true),
+        ];
+    }
+    // গ্লোবাল guest সেটিং
+    return [
+        'install'   => setting_get($db, 'appcenter_guest_install',   '1') === '1',
+        'update'    => setting_get($db, 'appcenter_guest_update',    '0') === '1',
+        'uninstall' => setting_get($db, 'appcenter_guest_uninstall', '0') === '1',
+        'download'  => setting_get($db, 'appcenter_guest_download',  '1') === '1',
+    ];
 }
